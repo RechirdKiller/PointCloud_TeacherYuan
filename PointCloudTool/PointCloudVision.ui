@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PointCloudVisionClass</class>
+ <widget class="QMainWindow" name="PointCloudVisionClass">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>704</width>
+    <height>442</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>点云处理工具</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>image/window.png</normaloff>image/window.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QVTKWidget" name="qvtkWidget">
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 0, 255);
+background-color: rgb(255, 0, 255);</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>704</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>文件</string>
+    </property>
+    <addaction name="action_open"/>
+   </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="title">
+     <string>编辑</string>
+    </property>
+    <widget class="QMenu" name="menu_3">
+     <property name="title">
+      <string>颜色</string>
+     </property>
+     <addaction name="action_setColor"/>
+     <addaction name="action_heightRamp"/>
+    </widget>
+    <addaction name="menu_3"/>
+   </widget>
+   <widget class="QMenu" name="menu_4">
+    <property name="title">
+     <string>工具</string>
+    </property>
+    <addaction name="action_pickPoints"/>
+    <addaction name="action_triangle"/>
+    <addaction name="action_feature"/>
+    <addaction name="action_grow"/>
+   </widget>
+   <addaction name="menu"/>
+   <addaction name="menu_2"/>
+   <addaction name="menu_4"/>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <property name="iconSize">
+    <size>
+     <width>30</width>
+     <height>30</height>
+    </size>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="action_open"/>
+   <addaction name="action_setColor"/>
+   <addaction name="action_heightRamp"/>
+   <addaction name="action_pickPoints"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>30</width>
+     <height>30</height>
+    </size>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>LeftToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="action_reset"/>
+   <addaction name="action_up"/>
+   <addaction name="action_front"/>
+   <addaction name="action_left"/>
+   <addaction name="action_back"/>
+   <addaction name="action_right"/>
+   <addaction name="action_bottom"/>
+   <addaction name="action_frontIso"/>
+   <addaction name="action_backIso"/>
+  </widget>
+  <action name="action_up">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/up.png</normaloff>:/PointCloudVision/image/up.png</iconset>
+   </property>
+   <property name="text">
+    <string>俯视图</string>
+   </property>
+  </action>
+  <action name="action_front">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/front.png</normaloff>:/PointCloudVision/image/front.png</iconset>
+   </property>
+   <property name="text">
+    <string>前视图</string>
+   </property>
+   <property name="font">
+    <font/>
+   </property>
+  </action>
+  <action name="action_left">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/left.png</normaloff>:/PointCloudVision/image/left.png</iconset>
+   </property>
+   <property name="text">
+    <string>左视图</string>
+   </property>
+   <property name="toolTip">
+    <string>左视图</string>
+   </property>
+  </action>
+  <action name="action_back">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/back.png</normaloff>:/PointCloudVision/image/back.png</iconset>
+   </property>
+   <property name="text">
+    <string>后视图</string>
+   </property>
+  </action>
+  <action name="action_right">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/right.png</normaloff>:/PointCloudVision/image/right.png</iconset>
+   </property>
+   <property name="text">
+    <string>右视图</string>
+   </property>
+  </action>
+  <action name="action_bottom">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/bottom.png</normaloff>:/PointCloudVision/image/bottom.png</iconset>
+   </property>
+   <property name="text">
+    <string>底视图</string>
+   </property>
+  </action>
+  <action name="action_open">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/open.png</normaloff>:/PointCloudVision/image/open.png</iconset>
+   </property>
+   <property name="text">
+    <string>打开</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_heightRamp">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/heightRamp.png</normaloff>:/PointCloudVision/image/heightRamp.png</iconset>
+   </property>
+   <property name="text">
+    <string>高度渲染</string>
+   </property>
+  </action>
+  <action name="action_pickPoints">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/pickPoints.png</normaloff>:/PointCloudVision/image/pickPoints.png</iconset>
+   </property>
+   <property name="text">
+    <string>选点</string>
+   </property>
+  </action>
+  <action name="action_frontIso">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/frontIso.png</normaloff>:/PointCloudVision/image/frontIso.png</iconset>
+   </property>
+   <property name="text">
+    <string>前轴测</string>
+   </property>
+  </action>
+  <action name="action_backIso">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/backIso.png</normaloff>:/PointCloudVision/image/backIso.png</iconset>
+   </property>
+   <property name="text">
+    <string>后轴测</string>
+   </property>
+  </action>
+  <action name="action_reset">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/reset.png</normaloff>:/PointCloudVision/image/reset.png</iconset>
+   </property>
+   <property name="text">
+    <string>重设</string>
+   </property>
+  </action>
+  <action name="action_setColor">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/color.png</normaloff>:/PointCloudVision/image/color.png</iconset>
+   </property>
+   <property name="text">
+    <string>点云颜色</string>
+   </property>
+  </action>
+  <action name="action_triangle">
+   <property name="text">
+    <string>三角网格化</string>
+   </property>
+  </action>
+  <action name="action_feature">
+   <property name="text">
+    <string>特征点提取</string>
+   </property>
+  </action>
+  <action name="action_grow">
+   <property name="text">
+    <string>区域增长分割</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>QVTKWidget</class>
+   <extends>QWidget</extends>
+   <header>QVTKWidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="PointCloudVision.qrc"/>
+ </resources>
+ <connections/>
+</ui>

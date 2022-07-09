@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/PointCloudVision">
+        <file>image/back.png</file>
+        <file>image/bottom.png</file>
+        <file>image/front.png</file>
+        <file>image/left.png</file>
+        <file>image/reset.png</file>
+        <file>image/right.png</file>
+        <file>image/up.png</file>
+        <file>image/open.png</file>
+        <file>image/heightRamp.png</file>
+        <file>image/pickPoints.png</file>
+        <file>image/backIso.png</file>
+        <file>image/frontIso.png</file>
+        <file>image/color.png</file>
+    </qresource>
+</RCC>
