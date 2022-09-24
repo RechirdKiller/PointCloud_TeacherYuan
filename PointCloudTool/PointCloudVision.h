@@ -104,14 +104,36 @@ public slots:
 
 	//设置高度渲染
 	void on_action_heightRamp_triggered();
+	
 	//三角网格化
 	void on_action_triangle_triggered();
+	
 	//特征点提取
 	void on_action_feature_triggered();
+	
 	//区域增长分割算法
 	void on_action_grow_triggered();
+
+	//PCA-ICP
+	void on_action_icp_triggered();
+
+	//SCALE-ICP
+	void on_action_action_scale_icp_triggered();
+
+	void on_action_3_triggered();
+
+	void on_action_4_triggered();
+	
+	void on_action_5_triggered();
+
+	void on_action_6_triggered();
+
+	void on_action_7_triggered();
+	
 	//进行高度渲染
 	void setHeightRamp(int, double);
+
+
 private:
 	Ui::PointCloudVisionClass ui;
 };

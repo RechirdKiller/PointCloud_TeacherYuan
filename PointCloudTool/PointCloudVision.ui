@@ -15,15 +15,35 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>image/window.png</normaloff>image/window.png</iconset>
+    <normaloff>C:/Users/86183/.designer/backup/image/window.png</normaloff>C:/Users/86183/.designer/backup/image/window.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+    <item row="0" column="2">
      <widget class="QVTKWidget" name="qvtkWidget">
       <property name="styleSheet">
        <string notr="true">color: rgb(255, 0, 255);
 background-color: rgb(255, 0, 255);</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QTextBrowser" name="textBrowser">
+      <property name="maximumSize">
+       <size>
+        <width>50</width>
+        <height>1500</height>
+       </size>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="2">
+     <widget class="QTableWidget" name="tableWidget">
+      <property name="maximumSize">
+       <size>
+        <width>1500</width>
+        <height>50</height>
+       </size>
       </property>
      </widget>
     </item>
@@ -35,7 +55,7 @@ background-color: rgb(255, 0, 255);</string>
      <x>0</x>
      <y>0</y>
      <width>704</width>
-     <height>26</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -61,10 +81,30 @@ background-color: rgb(255, 0, 255);</string>
     <property name="title">
      <string>工具</string>
     </property>
+    <widget class="QMenu" name="menu_5">
+     <property name="title">
+      <string>滤波</string>
+     </property>
+     <addaction name="action_3"/>
+     <addaction name="action_4"/>
+     <addaction name="action_5"/>
+     <addaction name="action_6"/>
+     <addaction name="action_7"/>
+    </widget>
+    <widget class="QMenu" name="menu_6">
+     <property name="title">
+      <string>点云配准</string>
+     </property>
+     <addaction name="action_pca_icp"/>
+     <addaction name="action_scale_icp"/>
+    </widget>
     <addaction name="action_pickPoints"/>
     <addaction name="action_triangle"/>
     <addaction name="action_feature"/>
     <addaction name="action_grow"/>
+    <addaction name="menu_6"/>
+    <addaction name="menu_5"/>
+    <addaction name="action"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -254,6 +294,51 @@ background-color: rgb(255, 0, 255);</string>
   <action name="action_grow">
    <property name="text">
     <string>区域增长分割</string>
+   </property>
+  </action>
+  <action name="action_scale__icp">
+   <property name="text">
+    <string>scale_ICP</string>
+   </property>
+  </action>
+  <action name="action_3">
+   <property name="text">
+    <string>体素滤波</string>
+   </property>
+  </action>
+  <action name="action_4">
+   <property name="text">
+    <string>直通滤波</string>
+   </property>
+  </action>
+  <action name="action_5">
+   <property name="text">
+    <string>统计滤波</string>
+   </property>
+  </action>
+  <action name="action_6">
+   <property name="text">
+    <string>均匀采样滤波</string>
+   </property>
+  </action>
+  <action name="action_7">
+   <property name="text">
+    <string>半径滤波</string>
+   </property>
+  </action>
+  <action name="action">
+   <property name="text">
+    <string>八叉树搜索</string>
+   </property>
+  </action>
+  <action name="action_pca_icp">
+   <property name="text">
+    <string>PCA_ICP</string>
+   </property>
+  </action>
+  <action name="action_scale_icp">
+   <property name="text">
+    <string>Scale_ICP</string>
    </property>
   </action>
  </widget>

@@ -86,8 +86,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="PCA_ICP.cpp" />
     <ClCompile Include="PointCloudVision.cpp" />
     <ClCompile Include="QHeightRampDlg.cpp" />
+    <ClCompile Include="scale_ICP_v2.cpp" />
     <QtRcc Include="PointCloudVision.qrc" />
     <ClCompile Include="main.cpp" />
     <QtUic Include="PointCloudVision.ui" />
@@ -98,6 +100,10 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="QHeightRampDlg.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PCA_ICP.h" />
+    <ClInclude Include="scale_ICP_v2.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

@@ -4,6 +4,19 @@
 #include <QMessageBox>
 #include <QColorDialog>
 #include <vtkRenderWindow.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/keypoints/uniform_sampling.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/conditional_removal.h>
+#include <pcl/ModelCoefficients.h>			
+#include <pcl/filters/project_inliers.h>	
+#include <pcl/filters/model_outlier_removal.h>
+#include <pcl/filters/uniform_sampling.h>
+#include <pcl/filters/voxel_grid.h>
+#include "PCA_ICP.h"
+#include "scale_ICP_v2.h"
 using namespace std;
 #pragma execution_character_set("utf-8")
 PointCloudVision::PointCloudVision(QWidget *parent)
@@ -506,6 +519,92 @@ void PointCloudVision::on_action_grow_triggered()
 	ui.qvtkWidget->update();
 
 }
+//PCA-ICP
+void PointCloudVision::on_action_icp_triggered()
+{
+
+}
+
+//SCALE-ICP
+void PointCloudVision::on_action_action_scale_icp_triggered()
+{
+	
+}
+
+void PointCloudVision::on_action_3_triggered()
+{
+	viewer->removeAllPointClouds();
+	viewer->removeAllCoordinateSystems();
+	viewer->removeAllShapes();
+
+	pcl::VoxelGrid<pcl::PointXYZ> vg;		//创建滤波器对象
+	vg.setInputCloud(m_currentCloud);				//设置待滤波点云
+	vg.setLeafSize(1.15f, 1.15f, 1.15f);	//设置体素大小
+	vg.filter(*m_currentCloud);			//执行滤波，保存滤波结果于cloud_filtered
+	viewer->addPointCloud(m_currentCloud);
+	ui.qvtkWidget->update();
+}
+
+void PointCloudVision::on_action_4_triggered()
+{
+	viewer->removeAllPointClouds();
+	viewer->removeAllCoordinateSystems();
+	viewer->removeAllShapes();
+
+	pcl::PassThrough<pcl::PointXYZ> pass;	//创建直通滤波器对象
+	pass.setInputCloud(m_currentCloud);		        //设置输入的点云
+	pass.setFilterFieldName("z");           //设置过滤时所需要点云类型为Z字段
+	pass.setFilterLimits(-0.1, 10);         //设置在过滤字段的范围
+	pass.setFilterLimitsNegative(true);     //设置保留还是过滤掉字段范围内的点，设置为true表示过滤掉字段范围内的点
+	pass.filter(*m_currentCloud);		    //执行滤波
+	viewer->addPointCloud(m_currentCloud);
+	ui.qvtkWidget->update();
+}
+
+void PointCloudVision::on_action_5_triggered()
+{
+	viewer->removeAllPointClouds();
+	viewer->removeAllCoordinateSystems();
+	viewer->removeAllShapes();
+
+	pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;   //创建统计滤波器对象 
+	sor.setInputCloud(m_currentCloud);         			         //设置输入的点云
+	sor.setMeanK(50);                 					 //设置KNN的k值
+	sor.setStddevMulThresh(1.0);      				     //设置标准偏差乘数为1.0
+	sor.filter(*m_currentCloud);          			     //执行滤波
+	viewer->addPointCloud(m_currentCloud);
+	ui.qvtkWidget->update();
+}
+
+void PointCloudVision::on_action_6_triggered()
+{
+	viewer->removeAllPointClouds();
+	viewer->removeAllCoordinateSystems();
+	viewer->removeAllShapes();
+
+
+	pcl::UniformSampling<pcl::PointXYZ> unisam;
+	unisam.setInputCloud(m_currentCloud);
+	unisam.setRadiusSearch(0.01f);
+	unisam.filter(*m_currentCloud);
+	viewer->addPointCloud(m_currentCloud);
+	ui.qvtkWidget->update();
+}
+
+void PointCloudVision::on_action_7_triggered()
+{
+	viewer->removeAllPointClouds();
+	viewer->removeAllCoordinateSystems();
+	viewer->removeAllShapes();
+
+	pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
+	outrem.setRadiusSearch(0.8);                     //设置半径为0.8的范围内找临近点
+	outrem.setMinNeighborsInRadius(2);               //设置查询点的邻域点集数小于2的删除
+	outrem.filter(*m_currentCloud);                  //执行滤波
+	viewer->addPointCloud(m_currentCloud);
+	ui.qvtkWidget->update();
+}
+
 double getMinValue(PointT p1, PointT p2)
 {
 	double min = 0;
