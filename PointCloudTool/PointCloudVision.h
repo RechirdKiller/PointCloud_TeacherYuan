@@ -1,8 +1,3 @@
-#pragma once
-
-#include <vtkAutoInit.h> 
-VTK_MODULE_INIT(vtkRenderingOpenGL2);
-VTK_MODULE_INIT(vtkInteractionStyle);
 
 #include <QtWidgets/QMainWindow>
 
@@ -14,6 +9,8 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include <vtkRenderWindow.h>					//vtk可视化窗口
 #include <pcl/common/common.h>					//点云极值
 #include "QHeightRampDlg.h"						//高度渲染
+#include "QOctreeDialog.h"						//八叉树
+												//kd-tree
 #include <pcl/filters/passthrough.h>			//直通滤波
 #include <pcl/io/pcd_io.h>						//PCL的PCD格式文件的输入输出头文件
 #include <pcl/io/ply_io.h>						//PCL的PLY格式文件的输入输出头文件
@@ -30,7 +27,9 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include <pcl/keypoints/narf_keypoint.h>
 #include <pcl/features/narf_descriptor.h>
 #include <pcl/console/parse.h>
+
 #include <string>
+
 
 //设置中文编码
 #pragma execution_character_set("utf-8")
@@ -52,6 +51,8 @@ public:
 
 private:
 
+	vtkOrientationMarkerWidget *axes_widget_member;
+
 	//当前的点云
 	PointCloudT::Ptr m_currentCloud;
 
@@ -66,14 +67,53 @@ private:
 
 	//高度渲染对话框
 	QHeightRampDlg heightRampDlg;
+
+	//八叉树对话框
+	QOctreeDialog octreeDialog;
+
+	//kd树对话框
+
+
+	//滤波工具栏；
+	QToolButton *toolButton;
+	//配准工具栏;
+	QToolButton *toolButton2;
+	//状态栏
+	QLabel *statusLabel;
+
+	//放大次数
 	double maxLen;
 
 public slots:
 	//打开点云
 	void on_action_open_triggered();
 
+	//保存点云
+	void on_action_preserve_triggered();
+
 	//重设视角
 	void on_action_reset_triggered();
+
+	//截图
+	void on_action_screenshot_triggered();
+
+	//按比例放大
+	void on_action_magnify_triggered();
+
+	//按比例缩小
+	void on_action_shrink_triggered();
+
+	//上移
+	void on_action_topMove_triggered();
+
+	//下移
+	void on_action_bottomMove_triggered();
+
+	//左移
+	void on_action_leftMove_triggered();
+
+	//右移
+	void on_action_rightMove_triggered();
 
 	//俯视图
 	void on_action_up_triggered();
@@ -120,19 +160,37 @@ public slots:
 	//SCALE-ICP
 	void on_action_action_scale_icp_triggered();
 
+	//滤波
+
+	//体素滤波
 	void on_action_3_triggered();
 
+	//直通滤波
 	void on_action_4_triggered();
 	
+	//统计滤波
 	void on_action_5_triggered();
 
+	//均匀采样滤波
 	void on_action_6_triggered();
 
+	//半径滤波
 	void on_action_7_triggered();
 	
 	//进行高度渲染
 	void setHeightRamp(int, double);
 
+	//八叉树;
+	void on_action_octree_triggered();
+
+	//八叉树体素搜索;
+	void octree_vsearch(double resolution, double x, double y, double z, int r, int g, int b);
+
+	//根据index判断上下左右移动
+	void changeLocationOfObject(int index);
+
+	//八叉树k近邻搜索;
+	//void ksearch(float resolution, double x, double y, double z, int k);
 
 private:
 	Ui::PointCloudVisionClass ui;

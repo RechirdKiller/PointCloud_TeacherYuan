@@ -10,6 +10,12 @@
     <height>442</height>
    </rect>
   </property>
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>点云处理工具</string>
   </property>
@@ -18,34 +24,135 @@
     <normaloff>C:/Users/86183/.designer/backup/image/window.png</normaloff>C:/Users/86183/.designer/backup/image/window.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="2">
-     <widget class="QVTKWidget" name="qvtkWidget">
-      <property name="styleSheet">
-       <string notr="true">color: rgb(255, 0, 255);
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SetFixedSize</enum>
+      </property>
+      <item>
+       <widget class="QVTKWidget" name="qvtkWidget">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>10</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 0, 255);
 background-color: rgb(255, 0, 255);</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="0">
-     <widget class="QTextBrowser" name="textBrowser">
-      <property name="maximumSize">
-       <size>
-        <width>50</width>
-        <height>1500</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="2">
-     <widget class="QTableWidget" name="tableWidget">
-      <property name="maximumSize">
-       <size>
-        <width>1500</width>
-        <height>50</height>
-       </size>
-      </property>
-     </widget>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="frame">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>7</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>2</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>40</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="statusTip">
+            <string>输出栏</string>
+           </property>
+           <property name="text">
+            <string>输出</string>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::NoTextInteraction</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextBrowser" name="textBrowser">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>5</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>107</height>
+            </size>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -55,7 +162,7 @@ background-color: rgb(255, 0, 255);</string>
      <x>0</x>
      <y>0</y>
      <width>704</width>
-     <height>23</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -63,6 +170,7 @@ background-color: rgb(255, 0, 255);</string>
      <string>文件</string>
     </property>
     <addaction name="action_open"/>
+    <addaction name="action_preserve"/>
    </widget>
    <widget class="QMenu" name="menu_2">
     <property name="title">
@@ -104,7 +212,7 @@ background-color: rgb(255, 0, 255);</string>
     <addaction name="action_grow"/>
     <addaction name="menu_6"/>
     <addaction name="menu_5"/>
-    <addaction name="action"/>
+    <addaction name="action_octree"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -124,9 +232,14 @@ background-color: rgb(255, 0, 255);</string>
     <bool>false</bool>
    </attribute>
    <addaction name="action_open"/>
+   <addaction name="action_preserve"/>
    <addaction name="action_setColor"/>
    <addaction name="action_heightRamp"/>
    <addaction name="action_pickPoints"/>
+   <addaction name="action_triangle"/>
+   <addaction name="action_feature"/>
+   <addaction name="action_grow"/>
+   <addaction name="action_octree"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QToolBar" name="toolBar">
@@ -146,6 +259,13 @@ background-color: rgb(255, 0, 255);</string>
     <bool>false</bool>
    </attribute>
    <addaction name="action_reset"/>
+   <addaction name="action_screenshot"/>
+   <addaction name="action_topMove"/>
+   <addaction name="action_bottomMove"/>
+   <addaction name="action_leftMove"/>
+   <addaction name="action_rightMove"/>
+   <addaction name="action_magnify"/>
+   <addaction name="action_shrink"/>
    <addaction name="action_up"/>
    <addaction name="action_front"/>
    <addaction name="action_left"/>
@@ -282,16 +402,28 @@ background-color: rgb(255, 0, 255);</string>
    </property>
   </action>
   <action name="action_triangle">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/triangMeshing.png</normaloff>:/PointCloudVision/image/triangMeshing.png</iconset>
+   </property>
    <property name="text">
     <string>三角网格化</string>
    </property>
   </action>
   <action name="action_feature">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/featurePoint.png</normaloff>:/PointCloudVision/image/featurePoint.png</iconset>
+   </property>
    <property name="text">
     <string>特征点提取</string>
    </property>
   </action>
   <action name="action_grow">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/RegGroSeg.png</normaloff>:/PointCloudVision/image/RegGroSeg.png</iconset>
+   </property>
    <property name="text">
     <string>区域增长分割</string>
    </property>
@@ -302,31 +434,55 @@ background-color: rgb(255, 0, 255);</string>
    </property>
   </action>
   <action name="action_3">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/Voxel.png</normaloff>:/PointCloudVision/image/Voxel.png</iconset>
+   </property>
    <property name="text">
     <string>体素滤波</string>
    </property>
   </action>
   <action name="action_4">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/pass-through.png</normaloff>:/PointCloudVision/image/pass-through.png</iconset>
+   </property>
    <property name="text">
     <string>直通滤波</string>
    </property>
   </action>
   <action name="action_5">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/statistics.png</normaloff>:/PointCloudVision/image/statistics.png</iconset>
+   </property>
    <property name="text">
     <string>统计滤波</string>
    </property>
   </action>
   <action name="action_6">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/uniformSampling.png</normaloff>:/PointCloudVision/image/uniformSampling.png</iconset>
+   </property>
    <property name="text">
     <string>均匀采样滤波</string>
    </property>
   </action>
   <action name="action_7">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/radius.png</normaloff>:/PointCloudVision/image/radius.png</iconset>
+   </property>
    <property name="text">
     <string>半径滤波</string>
    </property>
   </action>
-  <action name="action">
+  <action name="action_octree">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/octopustree.png</normaloff>:/PointCloudVision/image/octopustree.png</iconset>
+   </property>
    <property name="text">
     <string>八叉树搜索</string>
    </property>
@@ -339,6 +495,114 @@ background-color: rgb(255, 0, 255);</string>
   <action name="action_scale_icp">
    <property name="text">
     <string>Scale_ICP</string>
+   </property>
+  </action>
+  <action name="action_preserve">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/preserve.png</normaloff>:/PointCloudVision/image/preserve.png</iconset>
+   </property>
+   <property name="text">
+    <string>保存</string>
+   </property>
+   <property name="toolTip">
+    <string>保存文件</string>
+   </property>
+  </action>
+  <action name="action_magnify">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/add (2).png</normaloff>:/PointCloudVision/image/add (2).png</iconset>
+   </property>
+   <property name="text">
+    <string>放大</string>
+   </property>
+   <property name="toolTip">
+    <string>放大</string>
+   </property>
+  </action>
+  <action name="action_shrink">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/shrink (2).png</normaloff>:/PointCloudVision/image/shrink (2).png</iconset>
+   </property>
+   <property name="text">
+    <string>缩小</string>
+   </property>
+   <property name="toolTip">
+    <string>缩小</string>
+   </property>
+  </action>
+  <action name="action_screenshot">
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/screenshot.png</normaloff>:/PointCloudVision/image/screenshot.png</iconset>
+   </property>
+   <property name="text">
+    <string>截图</string>
+   </property>
+   <property name="toolTip">
+    <string>截图</string>
+   </property>
+  </action>
+  <action name="action_topMove">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/topArrow.png</normaloff>:/PointCloudVision/image/topArrow.png</iconset>
+   </property>
+   <property name="text">
+    <string>上移</string>
+   </property>
+   <property name="toolTip">
+    <string>上移</string>
+   </property>
+  </action>
+  <action name="action_bottomMove">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/bottomArrow.png</normaloff>:/PointCloudVision/image/bottomArrow.png</iconset>
+   </property>
+   <property name="text">
+    <string>下移</string>
+   </property>
+   <property name="toolTip">
+    <string>下移</string>
+   </property>
+  </action>
+  <action name="action_leftMove">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/leftArrow.png</normaloff>:/PointCloudVision/image/leftArrow.png</iconset>
+   </property>
+   <property name="text">
+    <string>左移</string>
+   </property>
+   <property name="toolTip">
+    <string>左移</string>
+   </property>
+  </action>
+  <action name="action_rightMove">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/rightArrow.png</normaloff>:/PointCloudVision/image/rightArrow.png</iconset>
+   </property>
+   <property name="text">
+    <string>右移</string>
+   </property>
+   <property name="toolTip">
+    <string>右移</string>
    </property>
   </action>
  </widget>

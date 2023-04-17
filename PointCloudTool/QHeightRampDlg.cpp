@@ -1,7 +1,7 @@
 #include "QHeightRampDlg.h"
 
 QHeightRampDlg::QHeightRampDlg(QWidget *parent)
-	: QWidget(parent)
+	: QDialog(parent)
 {
 	ui.setupUi(this);
 	setWindowModality(Qt::ApplicationModal);

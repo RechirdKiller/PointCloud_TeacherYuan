@@ -1,9 +1,9 @@
 #pragma once
 
-#include <QWidget>
+#include <QDialog>
 #include "ui_QHeightRampDlg.h"
 
-class QHeightRampDlg : public QWidget
+class QHeightRampDlg : public QDialog
 {
 	Q_OBJECT
 

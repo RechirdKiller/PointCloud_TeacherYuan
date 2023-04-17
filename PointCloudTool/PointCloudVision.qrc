@@ -1,17 +1,39 @@
 <RCC>
-    <qresource prefix="/PointCloudVision">
-        <file>image/back.png</file>
-        <file>image/bottom.png</file>
-        <file>image/front.png</file>
-        <file>image/left.png</file>
-        <file>image/reset.png</file>
-        <file>image/right.png</file>
-        <file>image/up.png</file>
-        <file>image/open.png</file>
-        <file>image/heightRamp.png</file>
-        <file>image/pickPoints.png</file>
-        <file>image/backIso.png</file>
-        <file>image/frontIso.png</file>
-        <file>image/color.png</file>
-    </qresource>
+  <qresource prefix="/PointCloudVision">
+    <file>image/add (2).png</file>
+    <file>image/shrink (2).png</file>
+    <file>image/bottomArrow.png</file>
+    <file>image/leftArrow.png</file>
+    <file>image/rightArrow.png</file>
+    <file>image/topArrow.png</file>
+    <file>image/screenshot.png</file>
+    <file>image/add.png</file>
+    <file>image/shrink.png</file>
+    <file>image/filtering.png</file>
+    <file>image/pass-through.png</file>
+    <file>image/radius.png</file>
+    <file>image/statistics.png</file>
+    <file>image/uniformSampling.png</file>
+    <file>image/Voxel.png</file>
+    <file>image/registration.png</file>
+    <file>image/back.png</file>
+    <file>image/bottom.png</file>
+    <file>image/front.png</file>
+    <file>image/left.png</file>
+    <file>image/reset.png</file>
+    <file>image/right.png</file>
+    <file>image/up.png</file>
+    <file>image/open.png</file>
+    <file>image/heightRamp.png</file>
+    <file>image/pickPoints.png</file>
+    <file>image/backIso.png</file>
+    <file>image/frontIso.png</file>
+    <file>image/color.png</file>
+    <file>image/featurePoint.png</file>
+    <file>image/octopustree.png</file>
+    <file>image/RegGroSeg.png</file>
+    <file>image/triangMeshing.png</file>
+    <file>image/registration.png</file>
+    <file>image/preserve.png</file>
+  </qresource>
 </RCC>

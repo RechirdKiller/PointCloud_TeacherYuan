@@ -43,12 +43,18 @@
     <ClCompile Include="scale_ICP_v2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="QOctreeDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="PointCloudVision.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="QHeightRampDlg.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="QOctreeDialog.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -59,12 +65,18 @@
     <QtUic Include="QHeightRampDlg.ui">
       <Filter>Form Files</Filter>
     </QtUic>
+    <QtUic Include="QOctreeDialog.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PCA_ICP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="scale_ICP_v2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="octree_search_my.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
