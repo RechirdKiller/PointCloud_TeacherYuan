@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/PointCloudVision">
+    <file>image/xiangliang.png</file>
     <file>image/add (2).png</file>
     <file>image/shrink (2).png</file>
     <file>image/bottomArrow.png</file>

@@ -3,7 +3,8 @@
 #include <pcl/point_types.h>
 #include <iostream>
 #include <math.h>
-
+typedef pcl::PointXYZ PointT;
+typedef pcl::PointCloud<PointT> PointCloudT;
 namespace octree_my 
 {
 	// 定义八叉树节点类
@@ -26,6 +27,8 @@ namespace octree_my
 		int depth = 0;
 
 	public:
+		//父节点;
+		octree_node_my * father_Node = NULL;
 		//非叶子节点属性;
 		octree_node_my * top_left_front_Node = NULL;
 		octree_node_my * top_left_back_Node = NULL;
@@ -147,7 +150,7 @@ namespace octree_my
 
 
 	//定义八叉树
-	class octree_my 
+	class octree
 	{
 	private:
 		//根节点：
@@ -159,8 +162,7 @@ namespace octree_my
 		//点云；
 		PointCloudT::Ptr cloud = nullptr;
 
-		~octree_my()
-		{};
+		
 		void setInputCloud(PointCloudT::Ptr cloud)
 		{
 			this->cloud = cloud;
@@ -222,21 +224,36 @@ namespace octree_my
 			}
 			else {
 				//定义分支，设置深度;
-				root->top_left_front_Node = &(octree_node_my());
+				root->top_left_front_Node =new octree_node_my();
+				root->top_left_front_Node->father_Node = root;
 				root->top_left_front_Node->setDepth(root->getDepth() + 1);
-				root->top_left_back_Node = &(octree_node_my());
+
+				root->top_left_back_Node =new octree_node_my();
+				root->top_left_back_Node->father_Node = root;
 				root->top_left_back_Node->setDepth(root->getDepth() + 1);
-				root->top_right_front_Node = &(octree_node_my());
+
+				root->top_right_front_Node =new octree_node_my();
+				root->top_right_front_Node->father_Node = root;
 				root->top_right_front_Node->setDepth(root->getDepth() + 1);
-				root->top_right_back_Node = &(octree_node_my());
+
+				root->top_right_back_Node =new octree_node_my();
+				root->top_right_back_Node->father_Node = root;
 				root->top_right_back_Node->setDepth(root->getDepth() + 1);
-				root->bottom_left_front_Node = &(octree_node_my());
+
+				root->bottom_left_front_Node =new octree_node_my();
+				root->bottom_left_front_Node->father_Node = root;
 				root->bottom_left_front_Node->setDepth(root->getDepth() + 1);
-				root->bottom_left_back_Node = &(octree_node_my());
+
+				root->bottom_left_back_Node =new octree_node_my();
+				root->bottom_left_back_Node->father_Node = root;
 				root->bottom_left_back_Node->setDepth(root->getDepth() + 1);
-				root->bottom_right_front_Node = &(octree_node_my());
+
+				root->bottom_right_front_Node =new octree_node_my();
+				root->bottom_right_front_Node->father_Node = root;
 				root->bottom_right_front_Node->setDepth(root->getDepth() + 1);
-				root->bottom_right_back_Node = &(octree_node_my());
+
+				root->bottom_right_back_Node =new octree_node_my();
+				root->bottom_right_back_Node->father_Node = root;
 				root->bottom_right_back_Node->setDepth(root->getDepth() + 1);
 
 				//找出划分尺度;
@@ -459,21 +476,36 @@ namespace octree_my
 			}
 			else {
 				//定义分支，设置深度;
-				root->top_left_front_Node = &(octree_node_my());
+				root->top_left_front_Node =new octree_node_my();
+				root->top_left_front_Node->father_Node = root;
 				root->top_left_front_Node->setDepth(root->getDepth() + 1);
-				root->top_left_back_Node = &(octree_node_my());
+
+				root->top_left_back_Node =new octree_node_my();
+				root->top_left_back_Node->father_Node = root;
 				root->top_left_back_Node->setDepth(root->getDepth() + 1);
-				root->top_right_front_Node = &(octree_node_my());
+
+				root->top_right_front_Node =new octree_node_my();
+				root->top_right_front_Node->father_Node = root;
 				root->top_right_front_Node->setDepth(root->getDepth() + 1);
-				root->top_right_back_Node = &(octree_node_my());
+
+				root->top_right_back_Node =new octree_node_my();
+				root->top_right_back_Node->father_Node = root;
 				root->top_right_back_Node->setDepth(root->getDepth() + 1);
-				root->bottom_left_front_Node = &(octree_node_my());
+
+				root->bottom_left_front_Node =new octree_node_my();
+				root->bottom_left_front_Node->father_Node = root;
 				root->bottom_left_front_Node->setDepth(root->getDepth() + 1);
-				root->bottom_left_back_Node = &(octree_node_my());
+
+				root->bottom_left_back_Node =new octree_node_my();
+				root->bottom_left_back_Node->father_Node = root;
 				root->bottom_left_back_Node->setDepth(root->getDepth() + 1);
-				root->bottom_right_front_Node = &(octree_node_my());
+
+				root->bottom_right_front_Node =new octree_node_my();
+				root->bottom_right_front_Node->father_Node = root;
 				root->bottom_right_front_Node->setDepth(root->getDepth() + 1);
-				root->bottom_right_back_Node = &(octree_node_my());
+
+				root->bottom_right_back_Node =new octree_node_my();
+				root->bottom_right_back_Node->father_Node = root;
 				root->bottom_right_back_Node->setDepth(root->getDepth() + 1);
 
 				//找出划分尺度;
@@ -913,12 +945,378 @@ namespace octree_my
 				}
 			}
 		};
-	public:
-		octree_my()
+		//按距离插入vector，距离最大的在末尾;
+		void addCloud() {}
+		//快速搜索一个体素内k个点;距离按从小到大;
+		void k_search_voxel(pcl::PointXYZ searchPoint, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance, octree_node_my* root, PointCloudT::Ptr cloud, int k, octree_node_my* leaf){
+			if (k <= 0)
+			{
+				return;
+			}
+			if (!root->getHasCloud())
+			{
+				//没有点云;
+				return;
+			}
+			//同时有两个坐标没有交集,则该方框在外面;
+			//点云边界
+			float cloud_left_border = root->getX_min();
+			float cloud_right_border = root->getX_Max();
+			float cloud_front_border = root->getY_min();
+			float cloud_back_border = root->getY_Max();
+			float cloud_bottom_border = root->getZ_min();
+			float cloud_top_border = root->getZ_Max();
+
+
+			BOOLEAN flag = FALSE;//flag = false 表示没有交集;
+			if (searchPoint.x <= cloud_right_border && searchPoint.x >= cloud_left_border
+				&& searchPoint.y <= cloud_back_border && searchPoint.y >= cloud_front_border
+				&& searchPoint.z <= cloud_top_border && searchPoint.z >= cloud_bottom_border)
+			{
+				//点在里面;
+				flag = TRUE;
+			}
+			else
+			{
+				return;
+			}
+
+			if (flag)
+			{
+				if (root->isLeaf())
+				{
+					leaf = root;
+					//是叶节点,合并方框内点，返回;
+					for (int i = 0; i < root->getPoints().size(); i++)
+					{
+						if (pointIndex.size() <= k)
+						{
+							if (pointIndex.size() == 0) {
+								pointIndex.push_back(i);
+								pointSquaredDistance.push_back(Distance(cloud->points[root->getPoints()[i]], searchPoint));
+							}
+							else {
+								float d = Distance(cloud->points[root->getPoints()[i]], searchPoint);
+								int index = i;
+								for (int j = 0; j < pointIndex.size(); j++) {
+									if (d <= pointSquaredDistance[j]) {
+										pointIndex.insert(pointIndex.begin() + j, index);
+										pointSquaredDistance.insert(pointSquaredDistance.begin() + j, d);
+										if (pointIndex.size() > k) {
+											pointIndex.pop_back();
+											pointSquaredDistance.pop_back();
+										}
+
+									}
+								}
+							}
+						}
+					}
+					return;
+				}
+				else
+				{
+					//找出划分尺度;
+					float x_length = 0.5 * (root->getX_Max() - root->getX_min());
+					float y_length = 0.5 * (root->getY_Max() - root->getY_min());
+					float z_length = 0.5 * (root->getZ_Max() - root->getZ_min());
+					float x_center = 0.5 * (root->getX_Max() + root->getX_min());
+					float y_center = 0.5 * (root->getY_Max() + root->getY_min());
+					float z_center = 0.5 * (root->getZ_Max() + root->getZ_min());
+					//不是叶节点;
+					int flag = 1;
+					if (searchPoint.z > z_center)
+					{
+						//上 flag = 1;
+						if (searchPoint.x < x_center)
+						{
+							//上 左 flag = 1;
+							if (searchPoint.y < y_center)
+							{
+								//上 左 前 flag = 1;
+							}
+							else
+							{
+								flag += 1;
+								//上 左 后 flag = 2;
+							}
+						}
+						else
+						{
+							flag += 2;
+							//上 右 flag = 3;
+							if (searchPoint.y < y_center)
+							{
+								//上 右 前 flag = 3;
+							}
+							else
+							{
+								flag += 1;
+								//上 右 后 flag = 4;
+							}
+
+						}
+					}
+					else
+					{
+						flag += 4;
+						//下 flag = 5;
+						if (searchPoint.x < x_center)
+						{
+							//下 左 flag = 5;
+							if (searchPoint.y < y_center)
+							{
+								//下 左 前 flag = 5;
+							}
+							else
+							{
+								flag += 1;
+								//下 左 后 flag = 6;
+							}
+						}
+						else
+						{
+							flag += 2;
+							//下 右 flag = 7;
+							if (searchPoint.y < y_center)
+							{
+								//下 右 前 flag = 7;
+							}
+							else
+							{
+								flag += 1;
+								//下 右 后 flag = 8;
+							}
+						}
+						switch (flag) {
+						case 1:
+							//左 上 前
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->top_left_front_Node, cloud);
+
+							break;
+						case 2:
+							//左 上 后
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->top_left_back_Node, cloud);
+
+							break;
+						case 3:
+							//右 上 前
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->top_right_front_Node, cloud);
+
+							break;
+						case 4:
+							//右 上 后
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->top_right_back_Node, cloud);
+
+							break;
+						case 5:
+							//左 下 前
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->bottom_left_front_Node, cloud);
+
+							break;
+						case 6:
+							//左 下 后
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->bottom_left_back_Node, cloud);
+
+							break;
+						case 7:
+							//右 下 前
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->bottom_right_front_Node, cloud);
+
+							break;
+						case 8:
+							//右 下 后
+							Vearch_root(searchPoint, pointIndex, pointSquaredDistance, root->bottom_right_back_Node, cloud);
+
+							break;
+						}
+					}
+				}
+			}
+		}
+		//查找root节点下所有子节点内的k个近邻点;
+		void k_search_full(pcl::PointXYZ searchPoint, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance, octree_node_my* root, PointCloudT::Ptr cloud, int k)
 		{
-			root = &(octree_node_my());
+			if (k <= 0) {
+				return;
+			}
+			if (!root->getHasCloud())
+			{
+				//没有点云;
+				return;
+			}
+			if (root->isLeaf())
+			{
+				//是叶节点,合并方框内点，返回;
+				for (int i = 0; i < root->getPoints().size(); i++)
+				{
+					if (pointIndex.size() <= k)
+					{
+						if (pointIndex.size() == 0) {
+							pointIndex.push_back(i);
+							pointSquaredDistance.push_back(Distance(cloud->points[root->getPoints()[i]], searchPoint));
+						}
+						else {
+							float d = Distance(cloud->points[root->getPoints()[i]], searchPoint);
+							int index = i;
+							for (int j = 0; j < pointIndex.size(); j++) {
+								if (d < pointSquaredDistance[j]) {
+									pointIndex.insert(pointIndex.begin() + j, index);
+									pointSquaredDistance.insert(pointSquaredDistance.begin() + j, d);
+									if (pointIndex.size() > k) {
+										pointIndex.pop_back();
+										pointSquaredDistance.pop_back();
+									}
+
+								}
+							}
+							pointIndex.push_back(i);
+							pointSquaredDistance.push_back(Distance(cloud->points[root->getPoints()[i]], searchPoint));
+						}
+					}
+				}
+			}
+			else {
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->top_left_front_Node, cloud, k);
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->top_left_back_Node, cloud, k);
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->top_right_front_Node, cloud, k);
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->top_right_back_Node, cloud, k);
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->bottom_left_front_Node, cloud, k);
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->bottom_left_back_Node, cloud, k);
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->bottom_right_front_Node, cloud, k);
+				k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->bottom_right_back_Node, cloud, k);
+
+			}
+		}
+		//搜索半径内最近的k个点，从小到大排列;
+		void k_search_radius(pcl::PointXYZ searchPoint, float length, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance, octree_node_my* root, PointCloudT::Ptr cloud, int k) 
+		{
+			if (k <= 0)
+			{
+				return;
+			}
+			if (!root->getHasCloud())
+			{
+				//没有点云;
+				return;
+			}
+			//同时有两个坐标没有交集,则该方框在外面;
+			//点云边界
+			float cloud_left_border = root->getX_min();
+			float cloud_right_border = root->getX_Max();
+			float cloud_front_border = root->getY_min();
+			float cloud_back_border = root->getY_Max();
+			float cloud_bottom_border = root->getZ_min();
+			float cloud_top_border = root->getZ_Max();
+			//方框边界
+			float point_left_border = searchPoint.x - length;
+			float point_right_border = searchPoint.x + length;
+			float point_front_border = searchPoint.y - length;
+			float point_back_border = searchPoint.y + length;
+			float point_bottom_border = searchPoint.z - length;
+			float point_top_border = searchPoint.z + length;
+
+			BOOLEAN flag = FALSE;//flag = false 表示没有交集;
+			if ((point_front_border <= cloud_back_border || point_back_border >= cloud_front_border) && (point_left_border <= cloud_right_border || point_right_border >= cloud_left_border))
+			{
+				//不考虑上下;
+				flag = TRUE;
+			}
+			else if ((point_front_border <= cloud_back_border || point_back_border >= cloud_front_border) && (point_bottom_border <= cloud_top_border || point_top_border >= cloud_bottom_border))
+			{
+				//不考虑左右
+				flag = TRUE;
+			}
+			else if ((point_bottom_border <= cloud_top_border || point_top_border >= cloud_bottom_border) && (point_left_border <= cloud_right_border || point_right_border >= cloud_left_border))
+			{
+				//不考虑前后
+				flag = TRUE;
+			}
+			if (flag)
+			{
+				//有交集
+				if (root->isLeaf())
+				{
+					//是叶节点,合并方框内点，返回;
+					for (int i = 0; i < root->getPoints().size(); i++)
+					{
+						if ((cloud->points[root->getPoints()[i]].x >= point_left_border && cloud->points[root->getPoints()[i]].x <= point_right_border)
+							&& (cloud->points[root->getPoints()[i]].y >= point_front_border && cloud->points[root->getPoints()[i]].y <= point_back_border)
+							&& (cloud->points[root->getPoints()[i]].z >= point_bottom_border && cloud->points[root->getPoints()[i]].z <= point_top_border))
+						{
+							if (pointIndex.size() <= k)
+							{
+								if (pointIndex.size() == 0) {
+									pointIndex.push_back(i);
+									pointSquaredDistance.push_back(Distance(cloud->points[root->getPoints()[i]], searchPoint));
+								}
+								else {
+									float d = Distance(cloud->points[root->getPoints()[i]], searchPoint);
+									int index = i;
+									for (int j = 0; j < pointIndex.size(); j++) {
+										if (d <= pointSquaredDistance[j]) {
+											pointIndex.insert(pointIndex.begin() + j, index);
+											pointSquaredDistance.insert(pointSquaredDistance.begin() + j, d);
+											if (pointIndex.size() > k) {
+												pointIndex.pop_back();
+												pointSquaredDistance.pop_back();
+											}
+
+										}
+									}
+								}
+							}
+						}
+					}
+					return;
+				}
+				else
+				{
+					//不是叶节点;
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->top_left_front_Node, cloud);
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->top_left_back_Node, cloud);
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->top_right_front_Node, cloud);
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->top_right_back_Node, cloud);
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->bottom_left_front_Node, cloud);
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->bottom_left_back_Node, cloud);
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->bottom_right_front_Node, cloud);
+					Search(searchPoint, length, pointIndex, pointSquaredDistance, root->bottom_right_back_Node, cloud);
+
+				}
+			}
+		}
+		//快速进行体素回溯找到k个点;
+		void quick_k_search(pcl::PointXYZ searchPoint, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance, octree_node_my* root, PointCloudT::Ptr cloud, int k)
+		{
+			if (k <= 0) {
+				return;
+			}
+			//搜索体素节点下最近的k个点云;
+			k_search_full(searchPoint, pointIndex, pointSquaredDistance, root, cloud, k);
+			if (pointIndex.size() == k) {
+				//该体素下有k个点;
+				return;
+			} else {
+				pointIndex.clear();
+				pointIndex.resize(0);
+				pointSquaredDistance.clear();
+				pointSquaredDistance.resize(0);
+				//搜素上一层
+				if (root->father_Node != NULL)
+				{
+					k_search_full(searchPoint, pointIndex, pointSquaredDistance, root->father_Node, cloud, k);
+				}
+			}
+		}
+
+	public:
+		octree()
+		{
+			root =new octree_node_my();
 			this->depth = 1;
 		};
+		~octree()
+		{};
 		//按最大深度创建树;
 		void CreatTree_depth(PointCloudT::Ptr cloud, int depth)
 		{
@@ -939,6 +1337,7 @@ namespace octree_my
 			for (int i = 0; i < cloud->points.size(); i++)
 			{
 				this->root->addPointIndex(i);
+				this->root->HasCloud();
 			}
 			//设置体素最大点云个数为点云个数;
 			this->max_points_size = cloud->points.size() + 1;
@@ -967,6 +1366,7 @@ namespace octree_my
 			for (int i = 0; i < cloud->points.size(); i++)
 			{
 				this->root->addPointIndex(i);
+				this->root->HasCloud();
 			}
 			//设置体素最大点云个数为点云个数;
 			this->max_points_size = max_pointSize;
@@ -982,12 +1382,20 @@ namespace octree_my
 		//体素搜索算法;
 		BOOLEAN voxelSearch(pcl::PointXYZ searchPoint, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance)
 		{
+			pointIndex.clear();
+			pointIndex.resize(0);
+			pointSquaredDistance.clear();
+			pointSquaredDistance.resize(0);
 			Vearch_root(searchPoint, pointIndex, pointSquaredDistance, this->root, cloud);
 			return pointIndex.size() > 0;
 		}
 		//半径邻域搜索算法;
 		BOOLEAN radiusSearch(pcl::PointXYZ searchPoint, float radius, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance)
 		{
+			pointIndex.clear();
+			pointIndex.resize(0);
+			pointSquaredDistance.clear();
+			pointSquaredDistance.resize(0);
 			std::vector<int> pointIndex_temp;
 			std::vector<float> pointSquaredDistance_temp;
 			Search(searchPoint, radius, pointIndex_temp, pointSquaredDistance_temp, this->root, cloud);
@@ -1001,6 +1409,38 @@ namespace octree_my
 				}
 			}
 			return pointIndex.size() > 0;
+		}
+		//k近邻搜搜;
+		BOOLEAN QuickKSearch(pcl::PointXYZ searchPoint, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance, int k)
+		{
+			pointIndex.clear();
+			pointIndex.resize(0);
+			pointSquaredDistance.clear();
+			pointSquaredDistance.resize(0);
+			octree_node_my* leaf;
+			quick_k_search(searchPoint, pointIndex, pointSquaredDistance, this->root, cloud, k);
+			return pointIndex.size() > 0;
+		}
+		BOOLEAN KSearch(pcl::PointXYZ searchPoint, std::vector<int> pointIndex, std::vector<float> pointSquaredDistance, int k)
+		{
+			octree_node_my* leaf;
+			quick_k_search(searchPoint, pointIndex, pointSquaredDistance, this->root, cloud, k);
+			if (pointIndex.size() <= 0)
+			{
+				return FALSE;
+			}
+			float radius = pointSquaredDistance[pointSquaredDistance.size() - 1];
+			//进行半径k邻搜索;
+			pointIndex.clear();
+			pointIndex.resize(0);
+			pointSquaredDistance.clear();
+			pointSquaredDistance.resize(0);
+			k_search_radius(searchPoint, radius, pointIndex, pointSquaredDistance, this->root, cloud, k);
+			return pointIndex.size() > 0;
+		}
+		PointCloudT::Ptr getInputCloud()
+		{
+			return cloud;
 		}
 	};
 }

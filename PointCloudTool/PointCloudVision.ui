@@ -240,6 +240,8 @@ background-color: rgb(255, 0, 255);</string>
    <addaction name="action_feature"/>
    <addaction name="action_grow"/>
    <addaction name="action_octree"/>
+   <addaction name="separator"/>
+   <addaction name="action_cloud_normal_vector_2"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QToolBar" name="toolBar">
@@ -603,6 +605,24 @@ background-color: rgb(255, 0, 255);</string>
    </property>
    <property name="toolTip">
     <string>右移</string>
+   </property>
+  </action>
+  <action name="action_cloud_normal_vector_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/xiangliang.png</normaloff>:/PointCloudVision/image/xiangliang.png</iconset>
+   </property>
+   <property name="text">
+    <string>点云法向量</string>
+   </property>
+   <property name="toolTip">
+    <string>点云法向量</string>
    </property>
   </action>
  </widget>

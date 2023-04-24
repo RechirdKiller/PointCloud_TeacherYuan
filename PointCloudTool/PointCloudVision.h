@@ -84,6 +84,9 @@ private:
 	//放大次数
 	double maxLen;
 
+	//鼠标选点回调函数
+	void pp_callback(const pcl::visualization::PointPickingEvent& event, void* args);
+
 public slots:
 	//打开点云
 	void on_action_open_triggered();
@@ -176,6 +179,9 @@ public slots:
 
 	//半径滤波
 	void on_action_7_triggered();
+
+	//点云法向量
+	void on_action_cloud_normal_vector_2_triggered();
 	
 	//进行高度渲染
 	void setHeightRamp(int, double);
@@ -189,8 +195,14 @@ public slots:
 	//根据index判断上下左右移动
 	void changeLocationOfObject(int index);
 
+	//鼠标选点
+	void on_action_pickPoints_triggered();
+
 	//八叉树k近邻搜索;
 	//void ksearch(float resolution, double x, double y, double z, int k);
+
+	//计算法向量——PCL
+	void computeNormals();
 
 private:
 	Ui::PointCloudVisionClass ui;

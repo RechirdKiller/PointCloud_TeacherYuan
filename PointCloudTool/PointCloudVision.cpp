@@ -1,10 +1,11 @@
-#include "PointCloudVision.h"
+ï»¿#include "PointCloudVision.h"
 #include <QFileDialog>
 #include <QFile>
 #include <QMessageBox>
 #include <QColorDialog>
 #include <QToolButton>
-#include <vtkRenderWindow.h>
+#include <vtkAxesActor.h>
+#include <vtkOrientationMarkerWidget.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
@@ -28,7 +29,21 @@
 #include <QtWidgets/QApplication>
 #include <iostream>
 #include"octree_search_my.h"
+#include <vtkRenderWindow.h>
+#include <vtkAutoInit.h>
+
+//è®¡ç®—æ³•å‘é‡PCLåº“
+#include <pcl/features/normal_3d_omp.h>
+#include <boost/thread/thread.hpp>
+
 #include <Eigen/Core>
+
+VTK_MODULE_INIT(vtkRenderingOpenGL2);
+VTK_MODULE_INIT(vtkInteractionStyle);
+VTK_MODULE_INIT(vtkRenderingFreeType);
+VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
+
+//#include <Eigen/Core>
 
 using namespace std;
 #pragma execution_character_set("utf-8")
@@ -36,50 +51,44 @@ using namespace std;
 QString Last_FileName=nullptr;
 double dist_scale = 1;
 
+//é¼ æ ‡é€‰ç‚¹ç»“æ„ä½“
+struct callback_args {
+	// structure used to pass arguments to the callback function
+	PointCloudT::Ptr clicked_points_3d;
+	pcl::visualization::PCLVisualizer::Ptr viewerPtr;
+};
+
 PointCloudVision::PointCloudVision(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
 
-	//³õÊ¼»¯
+	//åˆå§‹åŒ–
 	init();
 	//dist_scale = 1;
 
 }
 
-//»ñÈ¡Á½¸öµãÆ½ĞĞÓÚ×ø±êÖáµÄ×î¶Ì¾àÀë
+//è·å–ä¸¤ä¸ªç‚¹å¹³è¡Œäºåæ ‡è½´çš„æœ€çŸ­è·ç¦»
 double getMinValue(PointT p1, PointT p2);
 
-//»ñÈ¡Á½¸öµãÆ½ĞĞÓÚ×ø±êÖáµÄ×î³¤¾àÀë
+//è·å–ä¸¤ä¸ªç‚¹å¹³è¡Œäºåæ ‡è½´çš„æœ€é•¿è·ç¦»
 double getMaxValue(PointT p1, PointT p2);
 
 void setViewerPose(pcl::visualization::PCLVisualizer& viewer, const Eigen::Affine3f& viewer_pose);
-//ÇóÁ½¸öµãµÄÖĞµã
+//æ±‚ä¸¤ä¸ªç‚¹çš„ä¸­ç‚¹
 double* getCenterPoint(PointT p1, PointT p2);
 
-//ÒÔÖĞµãÎªÖĞĞÄ£¬Èı¸öÎ¬¶ÈµÄ×îĞ¡¾àÀëµÄ0.3±¶Îª×ø±êÖáµÄ±ê¿Ì¶È£¬×î´óÖá³¤¶ÈÎª´óĞ¡ÉèÖÃ×ø±êÖá;
+//ä»¥ä¸­ç‚¹ä¸ºä¸­å¿ƒï¼Œä¸‰ä¸ªç»´åº¦çš„æœ€å°è·ç¦»çš„0.3å€ä¸ºåæ ‡è½´çš„æ ‡åˆ»åº¦ï¼Œæœ€å¤§è½´é•¿åº¦ä¸ºå¤§å°è®¾ç½®åæ ‡è½´;
 void setCoordinate(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer, PointCloudT::Ptr m_currentCloud);
-
-//ÏÔÊ¾×ø±êÖáxyz£¨Î´Íê³É£©
+void outputInDebug(string info);
+//æ˜¾ç¤ºåæ ‡è½´xyzï¼ˆæœªå®Œæˆï¼‰
 void addOrientationMarkerWidgetAxesToview(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer, vtkRenderWindowInteractor* interactor, double x, double y, double x_wide, double y_wide)
 {
-	/*pcl::PointXYZ a, b, z;
-	a.x = 0;
-	a.y = 0;
-	a.z = 0;
-	b.x = 5;
-	b.y = 8;
-	b.z = 10;
-	z.x = 4;
-	z.y = 3;
-	z.z = 20;
-	viewer->addArrow<pcl::PointXYZ>(b, z, 255, 0, 0, "arrow");  //´ø¼ıÍ·
 
-	viewer->addText3D("X", b, 100.0, 255, 255, 255, "XLable", 1);
-	viewer->addText3D("Y", z, 100.0, 255, 255, 255, "YLable", 1);*/
 }
 
-//Çó×ø±êÖáÔ­µã
+//æ±‚åæ ‡è½´åŸç‚¹
 void getCenterPoint(PointCloudT::Ptr m_currentCloud, double* centerPoint)
 {
 	double sumOfX = 0;
@@ -98,96 +107,111 @@ void getCenterPoint(PointCloudT::Ptr m_currentCloud, double* centerPoint)
 
 }
 
-//³õÊ¼»¯
+//åˆå§‹åŒ–
 void PointCloudVision::init()
 {
-	//µãÔÆ³õÊ¼»¯
+	//ç‚¹äº‘åˆå§‹åŒ–
 	m_currentCloud.reset(new PointCloudT);
-	//¿ÉÊÓ»¯¶ÔÏó³õÊ¼»¯
+	//å¯è§†åŒ–å¯¹è±¡åˆå§‹åŒ–
 	viewer.reset(new pcl::visualization::PCLVisualizer("viewer", false));
-	
-	//ÉèÖÃVTK¿ÉÊÓ»¯´°¿ÚÖ¸Õë
+
+	//æ·»åŠ åæ ‡è½´
+	//vtkSmartPointer<vtkRenderWindow> renderer = vtkSmartPointer<vtkRenderWindow>::New();
+
+	vtkSmartPointer<vtkRenderer> rendererVic = vtkSmartPointer<vtkRenderer>::New();
+	vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+	axes->SetAxisLabels(1);
+	axes->SetVisibility(true);
+	rendererVic->AddActor(axes);
+	//viewer->getRenderWindow()->AddRenderer(rendererVic);
+	//viewer->getRenderWindow()->GetRenderers()->GetFirstRenderer()->AddActor2D(axes);
+	//è®¾ç½®VTKå¯è§†åŒ–çª—å£æŒ‡é’ˆ
 	ui.qvtkWidget->SetRenderWindow(viewer->getRenderWindow());
 
-	//ÉèÖÃ´°¿Ú½»»¥£¬´°¿Ú¿É½ÓÊÜ¼üÅÌµÈÊÂ¼ş
+	//ui.qvtkWidget->SetRenderWindow(renderer);
+	//è®¾ç½®çª—å£äº¤äº’ï¼Œçª—å£å¯æ¥å—é”®ç›˜ç­‰äº‹ä»¶
 	viewer->setupInteractor(ui.qvtkWidget->GetInteractor(), ui.qvtkWidget->GetRenderWindow());
 	viewer->setBackgroundColor((double)113/255, (double)110/255, (double)119/255);
-
+	viewer->addOrientationMarkerWidgetAxes(viewer->getRenderWindow()->GetInteractor());
 	
-	//Ìí¼Ó×ø±êÖá
-	viewer->addCoordinateSystem(1, 0);
-
-	//²Ûº¯Êı
-	//¸ß¶ÈäÖÈ¾
+	//æ·»åŠ åæ ‡è½´
+	//viewer->addCoordinateSystem(1, 0);
+	
+	//æ§½å‡½æ•°
+	//é«˜åº¦æ¸²æŸ“
 	connect(&heightRampDlg, SIGNAL(setHeightRamp(int, double)), this, SLOT(setHeightRamp(int, double)));
-	//°Ë²æÊ÷ÌåËØ½üÁÚËÑË÷
+	//å…«å‰æ ‘ä½“ç´ è¿‘é‚»æœç´¢
 	connect(&octreeDialog, SIGNAL(octree_vsearch(double, double, double, double, int, int, int)), this, SLOT(octree_vsearch(double, double, double, double, int, int, int)));
 	//octree
 
-	//ÉèÖÃÂË²¨¹¤¾ßÀ¸;
+	//è®¾ç½®æ»¤æ³¢å·¥å…·æ ;
 	toolButton = new QToolButton(this);
-	//Ö»ÏÔÊ¾Í¼Æ¬;
+	//åªæ˜¾ç¤ºå›¾ç‰‡;
 	toolButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	//°´ÏÂ°´Å¥Á¢¼´¹¤×÷;
+	//æŒ‰ä¸‹æŒ‰é’®ç«‹å³å·¥ä½œ;
 	toolButton->setPopupMode(QToolButton::InstantPopup);
 	toolButton->setMenu(ui.menu_5);
-	toolButton->setToolTip("ÂË²¨");
+	toolButton->setToolTip("æ»¤æ³¢");
 	toolButton->setIcon(QIcon(":/PointCloudVision/image/filtering.png"));
 	ui.mainToolBar->addWidget(toolButton);
 
-	//ÉèÖÃÅä×¼¹¤¾ßÀ¸;
+	//è®¾ç½®é…å‡†å·¥å…·æ ;
 	toolButton2 = new QToolButton(this);
-	//Ö»ÏÔÊ¾Í¼Æ¬;
+	//åªæ˜¾ç¤ºå›¾ç‰‡;
 	toolButton2->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	//°´ÏÂ°´Å¥Á¢¼´¹¤×÷;
+	//æŒ‰ä¸‹æŒ‰é’®ç«‹å³å·¥ä½œ;
 	toolButton2->setPopupMode(QToolButton::InstantPopup);
 	toolButton2->setMenu(ui.menu_6);
-	toolButton2->setToolTip("µãÔÆÅä×¼");
+	toolButton2->setToolTip("ç‚¹äº‘é…å‡†");
 	toolButton2->setIcon(QIcon(":/PointCloudVision/image/registration.png"));
 	ui.mainToolBar->addWidget(toolButton2);
-	//×´Ì¬ĞÅÏ¢¾ÖÓòÀ¸£»
+	//çŠ¶æ€ä¿¡æ¯å±€åŸŸæ ï¼›
 	ui.label->setStyleSheet("background-color:rgb(240,240,240);color:rgb(255,0,0);");
-	//ÏÔÊ¾ÇøÓò
+	//æ˜¾ç¤ºåŒºåŸŸ
 	//ui.textBrowser->setStyleSheet("background-color:rgb(230,231,232);color:rgb(255,0,0);");
-	//±ß¿òÑÕÉ«
-
+	//è¾¹æ¡†é¢œè‰²
+	ui.textBrowser->setMaximumHeight(400);
+	ui.label->setMaximumHeight(100);
+	ui.frame->setMaximumHeight(500);
+	ui.qvtkWidget->update();
 }
 
 
-//´ò¿ªµãÔÆ
+
+//æ‰“å¼€ç‚¹äº‘
 void PointCloudVision::on_action_open_triggered()
 {
-	//ÔÚÊä³öÀ¸Êä³ö;
-	ui.textBrowser->append("Ñ¡ÔñµãÔÆÎÄ¼ş...");
+	//åœ¨è¾“å‡ºæ è¾“å‡º;
+	ui.textBrowser->append("é€‰æ‹©ç‚¹äº‘æ–‡ä»¶...");
 	ui.textBrowser->update();
 	
-	//»ñÈ¡µãÔÆÂ·¾¶
-	QString path = QFileDialog::getOpenFileName(this, "Ñ¡ÔñµãÔÆÎÄ¼ş", ".//", "µãÔÆÎÄ¼ş(*.txt *.pcd *.ply);;ËùÓĞÎÄ¼ş(*.*)");
+	//è·å–ç‚¹äº‘è·¯å¾„
+	QString path = QFileDialog::getOpenFileName(this, "é€‰æ‹©ç‚¹äº‘æ–‡ä»¶", ".//", "ç‚¹äº‘æ–‡ä»¶(*.txt *.pcd *.ply);;æ‰€æœ‰æ–‡ä»¶(*.*)");
 
-	//¶ÁÈ¡µãÔÆÊı¾İ
+	//è¯»å–ç‚¹äº‘æ•°æ®
 	QFile file(path);
 
 	if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		//Çå¿ÕµãÔÆ
+		//æ¸…ç©ºç‚¹äº‘
 		m_currentCloud->clear();
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		string Path = path.toStdString();
 		Last_FileName = path;
-		string suffixStr = Path.substr(Path.find_last_of('.') + 1);//»ñÈ¡ÎÄ¼şºó×º
+		string suffixStr = Path.substr(Path.find_last_of('.') + 1);//è·å–æ–‡ä»¶åç¼€
 		if (suffixStr == "pcd") {
 			if (pcl::io::loadPCDFile<pcl::PointXYZ>(Path, *m_currentCloud) == -1) {
-				//Êä³öÀ¸Êä³ö
-				ui.textBrowser->append("¾¯¸æ£ºµãÔÆÎÄ¼ş¸ñÊ½´íÎó");
+				//è¾“å‡ºæ è¾“å‡º
+				ui.textBrowser->append("è­¦å‘Šï¼šç‚¹äº‘æ–‡ä»¶æ ¼å¼é”™è¯¯");
 		  ui.textBrowser->update();
 		  QApplication::processEvents();
 
-				QMessageBox::warning(this, "¾¯¸æ", "µãÔÆÎÄ¼ş¸ñÊ½´íÎó£¡");
+				QMessageBox::warning(this, "è­¦å‘Š", "ç‚¹äº‘æ–‡ä»¶æ ¼å¼é”™è¯¯ï¼");
 			}
 			else {
-				//Êä³öÀ¸Êä³ö´ò¿ª³É¹¦
-				QString outputString = "³É¹¦¼ÓÔØ";
+				//è¾“å‡ºæ è¾“å‡ºæ‰“å¼€æˆåŠŸ
+				QString outputString = "æˆåŠŸåŠ è½½";
 				outputString += path;
 				ui.textBrowser->append(outputString);
 		  ui.textBrowser->update();
@@ -200,20 +224,20 @@ void PointCloudVision::on_action_open_triggered()
 					ui.statusBar->removeWidget(statusLabel);
 				}
 				statusLabel = new QLabel(path, this);
-				ui.statusBar->addPermanentWidget(statusLabel); //ÏÖÊµÓÀ¾ÃĞÅÏ¢
+				ui.statusBar->addPermanentWidget(statusLabel); //ç°å®æ°¸ä¹…ä¿¡æ¯
 			}
 		}
 		else if (suffixStr == "ply") {
 			if (pcl::io::loadPLYFile<pcl::PointXYZ>(Path, *m_currentCloud) == -1) {
-				//Êä³öÀ¸Êä³ö
-				ui.textBrowser->append("¾¯¸æ£ºµãÔÆÎÄ¼ş¸ñÊ½´íÎó");
+				//è¾“å‡ºæ è¾“å‡º
+				ui.textBrowser->append("è­¦å‘Šï¼šç‚¹äº‘æ–‡ä»¶æ ¼å¼é”™è¯¯");
 		  ui.textBrowser->update();QApplication::processEvents();
 
-				QMessageBox::warning(this, "¾¯¸æ", "µãÔÆÎÄ¼ş¸ñÊ½´íÎó£¡");
+				QMessageBox::warning(this, "è­¦å‘Š", "ç‚¹äº‘æ–‡ä»¶æ ¼å¼é”™è¯¯ï¼");
 			}
 			else {
-				//Êä³öÀ¸Êä³ö´ò¿ª³É¹¦
-				QString outputString = "³É¹¦¼ÓÔØ";
+				//è¾“å‡ºæ è¾“å‡ºæ‰“å¼€æˆåŠŸ
+				QString outputString = "æˆåŠŸåŠ è½½";
 				outputString += path;
 				ui.textBrowser->append(outputString);
 		  ui.textBrowser->update();QApplication::processEvents();
@@ -222,12 +246,12 @@ void PointCloudVision::on_action_open_triggered()
 					ui.statusBar->removeWidget(statusLabel);
 				}
 				statusLabel = new QLabel(path, this);
-				ui.statusBar->addPermanentWidget(statusLabel); //ÏÖÊµÓÀ¾ÃĞÅÏ¢
+				ui.statusBar->addPermanentWidget(statusLabel); //ç°å®æ°¸ä¹…ä¿¡æ¯
 			}
 		}
 		
 		else if(suffixStr == "txt") {
-			int flag = 0;//1±íÊ¾Òì³£ÍË³ö;
+			int flag = 0;//1è¡¨ç¤ºå¼‚å¸¸é€€å‡º;
 			while (!file.atEnd())
 			{
 				QByteArray line = file.readLine();
@@ -242,17 +266,17 @@ void PointCloudVision::on_action_open_triggered()
 
 				if (strList.size() != 3)
 				{
-					//Êä³öÀ¸Êä³ö
-					ui.textBrowser->append("¾¯¸æ£ºµãÔÆÎÄ¼ş¸ñÊ½´íÎó");
+					//è¾“å‡ºæ è¾“å‡º
+					ui.textBrowser->append("è­¦å‘Šï¼šç‚¹äº‘æ–‡ä»¶æ ¼å¼é”™è¯¯");
 			  ui.textBrowser->update();QApplication::processEvents();
 
-					QMessageBox::warning(this, "¾¯¸æ", "µãÔÆÎÄ¼ş¸ñÊ½´íÎó£¡");
+					QMessageBox::warning(this, "è­¦å‘Š", "ç‚¹äº‘æ–‡ä»¶æ ¼å¼é”™è¯¯ï¼");
 					flag = 1;
 					break;
 				}
 
 
-				//µãÔÆ¸³Öµ
+				//ç‚¹äº‘èµ‹å€¼
 				PointT point;
 				point.x = strList.at(0).toDouble();
 				point.y = strList.at(1).toDouble();
@@ -261,8 +285,8 @@ void PointCloudVision::on_action_open_triggered()
 				m_currentCloud->push_back(point);
 			}
 			if (flag == 0) {
-				//Êä³öÀ¸Êä³ö´ò¿ª³É¹¦
-				QString outputString = "³É¹¦¼ÓÔØ";
+				//è¾“å‡ºæ è¾“å‡ºæ‰“å¼€æˆåŠŸ
+				QString outputString = "æˆåŠŸåŠ è½½";
 				outputString += path;
 				ui.textBrowser->append(outputString);
 				ui.textBrowser->update();QApplication::processEvents();
@@ -271,24 +295,24 @@ void PointCloudVision::on_action_open_triggered()
 					ui.statusBar->removeWidget(statusLabel);
 				}
 				statusLabel = new QLabel(path, this);
-				ui.statusBar->addPermanentWidget(statusLabel); //ÏÖÊµÓÀ¾ÃĞÅÏ¢
+				ui.statusBar->addPermanentWidget(statusLabel); //ç°å®æ°¸ä¹…ä¿¡æ¯
 			}
 		}
 		
-		//Ìí¼Óµ½´°¿Ú
+		//æ·»åŠ åˆ°çª—å£
 		viewer->addPointCloud(m_currentCloud);
 		//viewer->removeAllCoordinateSystems();
 		setCoordinate(viewer, m_currentCloud);
 		maxLen = getMaxValue(p_max, p_min);
-		//ÖØÉèÊÓ½Ç
+		//é‡è®¾è§†è§’
 		dist_scale = 1.0;
 		viewer->resetCamera();
 
-		//Ë¢ĞÂ´°¿Ú
+		//åˆ·æ–°çª—å£
 		ui.qvtkWidget->update();
 	}
 	else {
-		ui.textBrowser->append("È¡ÏûÑ¡Ôñ");
+		ui.textBrowser->append("å–æ¶ˆé€‰æ‹©");
 		ui.textBrowser->update();QApplication::processEvents();
 		 
 	}
@@ -316,7 +340,7 @@ void outputInDebug(string info)
 	OutputDebugString(out);
 }
 
-//±£´æµãÔÆ
+//ä¿å­˜ç‚¹äº‘
 void PointCloudVision::on_action_preserve_triggered()
 {
 		QString filename = QFileDialog::getSaveFileName(this, tr("Open point cloud"), "", tr("Point cloud data (*.pcd *.ply *.txt)"));
@@ -324,7 +348,7 @@ void PointCloudVision::on_action_preserve_triggered()
 		//PCL_INFO("File chosen: %s\n", filename.toStdString().c_str());
 
 		if (filename.isEmpty()) {
-			ui.textBrowser->append("±£´æ´íÎó£ºÎ´ÊäÈëÂ·¾¶");
+			ui.textBrowser->append("ä¿å­˜é”™è¯¯ï¼šæœªè¾“å…¥è·¯å¾„");
 			ui.textBrowser->update();QApplication::processEvents();
 
 			return;
@@ -354,45 +378,52 @@ void PointCloudVision::on_action_preserve_triggered()
 
 		if (return_status != 0)
 		{
-			ui.textBrowser->append("Ğ´Èë´íÎó");
+			ui.textBrowser->append("å†™å…¥é”™è¯¯");
 	  ui.textBrowser->update();QApplication::processEvents();
 
 			return;
 		}
 }
 
-//ÖØÉèÊÓ½Ç
+//ç‚¹äº‘æ³•å‘é‡
+void PointCloudVision::on_action_cloud_normal_vector_2_triggered()
+{
+	outputInDebug("****");
+	return;
+}
+
+//é‡è®¾è§†è§’
 void PointCloudVision::on_action_reset_triggered()
 {
-	ui.textBrowser->append("ÖØÉèÊÓ½Ç");
+	ui.textBrowser->append("é‡è®¾è§†è§’");
 	ui.textBrowser->update();
 
 	if (!m_currentCloud->empty())
 	{
 		viewer->resetCamera();
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ÖØÉè³É¹¦");
+		ui.textBrowser->append("é‡è®¾æˆåŠŸ");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 	else {
-		ui.textBrowser->append("ÖØÉèÊ§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("é‡è®¾å¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 }
 
-//½ØÍ¼
+//æˆªå›¾
 void PointCloudVision::on_action_screenshot_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		//Íê³É½ØÍ¼²Ù×÷
+		//å®Œæˆæˆªå›¾æ“ä½œ
 		QScreen *screen = QGuiApplication::primaryScreen();
 		QPixmap pixmap = screen->grabWindow(ui.qvtkWidget->winId());
 
-		//ÓÃ»§Ñ¡È¡ÎÄ¼şÃû
+		//ç”¨æˆ·é€‰å–æ–‡ä»¶å
 		QString filename = QFileDialog::getSaveFileName(this, tr("Save the image"), "", tr("Image (*.jpg *.png)"));
 
 		if (filename.isEmpty()) {
-			ui.textBrowser->append("±£´æ´íÎó£ºÎ´ÊäÈëÂ·¾¶");
+			ui.textBrowser->append("ä¿å­˜é”™è¯¯ï¼šæœªè¾“å…¥è·¯å¾„");
 	  ui.textBrowser->update();QApplication::processEvents();
 
 			return;
@@ -410,37 +441,37 @@ void PointCloudVision::on_action_screenshot_triggered()
 
 		if (!finish)
 		{
-			ui.textBrowser->append("Ğ´Èë´íÎó");
+			ui.textBrowser->append("å†™å…¥é”™è¯¯");
 			ui.textBrowser->update(); QApplication::processEvents();
 
 			return;
 		}
 		else {
 
-			ui.textBrowser->append("Ğ´Èë³É¹¦£¬ÎÄ¼şÎ»ÖÃÎª£º" + filename);
+			ui.textBrowser->append("å†™å…¥æˆåŠŸï¼Œæ–‡ä»¶ä½ç½®ä¸ºï¼š" + filename);
 			ui.textBrowser->update(); QApplication::processEvents();
 
 		}
-		ui.textBrowser->append("½ØÍ¼ÒÑ±£´æ");
+		ui.textBrowser->append("æˆªå›¾å·²ä¿å­˜");
 		ui.textBrowser->update(); QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("½ØÍ¼Ê§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("æˆªå›¾å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
 		ui.textBrowser->update(); QApplication::processEvents();
 	}
 }
 
 
 
-//°´±ÈÀı·Å´ó
+//æŒ‰æ¯”ä¾‹æ”¾å¤§
 void PointCloudVision::on_action_magnify_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		ui.qvtkWidget->update();
 		/*viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 10);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ÉèÖÃ´óĞ¡³É¹¦");
+		ui.textBrowser->append("è®¾ç½®å¤§å°æˆåŠŸ");
 		*/
 		if (dist_scale < 3) {
 			dist_scale += 0.2;
@@ -448,7 +479,7 @@ void PointCloudVision::on_action_magnify_triggered()
 			dist_scale += 0.5;
 		}else{
 			dist_scale = 5;
-			ui.textBrowser->append("ÒÑµ½×î´ó·Å´ó±¶Êı");
+			ui.textBrowser->append("å·²åˆ°æœ€å¤§æ”¾å¤§å€æ•°");
 			ui.textBrowser->update();QApplication::processEvents();
 			return;
 		}
@@ -465,18 +496,18 @@ void PointCloudVision::on_action_magnify_triggered()
 		viewer->removeAllPointClouds();
 		viewer->addPointCloud(output);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ÉèÖÃ´óĞ¡³É¹¦");
+		ui.textBrowser->append("è®¾ç½®å¤§å°æˆåŠŸ");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 	else {
-		ui.textBrowser->append("ÉèÖÃ´óĞ¡Ê§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("è®¾ç½®å¤§å°å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 	
 }
 
 
-//°´±ÈÀıËõĞ¡
+//æŒ‰æ¯”ä¾‹ç¼©å°
 void PointCloudVision::on_action_shrink_triggered()
 {
 	if (!m_currentCloud->empty()){
@@ -493,7 +524,7 @@ void PointCloudVision::on_action_shrink_triggered()
 		}
 		else{
 			dist_scale = 0.1;
-			ui.textBrowser->append("ÒÑµ½×îĞ¡ËõĞ¡±¶Êı");
+			ui.textBrowser->append("å·²åˆ°æœ€å°ç¼©å°å€æ•°");
 			ui.textBrowser->update(); 
 			QApplication::processEvents();
 			return;
@@ -508,22 +539,55 @@ void PointCloudVision::on_action_shrink_triggered()
 
 		pcl::transformPointCloud(*m_currentCloud, *output, transform);
 		pcl::copyPointCloud(*output, *m_currentCloud);
-		//ÖØĞÂÌí¼ÓµãÔÆ
+		//é‡æ–°æ·»åŠ ç‚¹äº‘
 		viewer->removeAllPointClouds();
 		viewer->addPointCloud(m_currentCloud);
-		ui.textBrowser->append("ÉèÖÃ´óĞ¡³É¹¦");
+		ui.textBrowser->append("è®¾ç½®å¤§å°æˆåŠŸ");
 		ui.textBrowser->update(); 
 		QApplication::processEvents();
 		ui.qvtkWidget->update();
 
 	} else {
-		ui.textBrowser->append("ÉèÖÃ´óĞ¡Ê§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("è®¾ç½®å¤§å°å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
 		ui.textBrowser->update(); QApplication::processEvents();
 
 	}
 }
 
-//¸ù¾İ´«ÈëµÄindexÅĞ¶ÏÊÇ·ñÊÇÉÏÏÂ×óÓÒÒÆ¶¯
+//é¼ æ ‡é€‰ç‚¹å›è°ƒå‡½æ•°
+void pp_callback(const pcl::visualization::PointPickingEvent& event, void* args)
+{
+	struct callback_args* data = (struct callback_args *)args;
+	if (event.getPointIndex() == -1)
+		return;
+	PointT current_point;
+	event.getPoint(current_point.x, current_point.y, current_point.z);
+	
+	data->clicked_points_3d->points.push_back(current_point);
+	// Draw clicked points in red:
+	pcl::visualization::PointCloudColorHandlerCustom<PointT> red(data->clicked_points_3d, 255, 0, 0);
+	data->viewerPtr->removePointCloud("clicked_points");
+	data->viewerPtr->addPointCloud(data->clicked_points_3d, red, "clicked_points");
+	data->viewerPtr->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 10, "clicked_points");
+	std::cout << current_point.x << " " << current_point.y << " " << current_point.z << std::endl;
+}
+
+//é¼ æ ‡é€‰ç‚¹
+void PointCloudVision::on_action_pickPoints_triggered()
+{
+	struct callback_args cb_args;
+	PointCloudT::Ptr clicked_points_3d(new PointCloudT);
+	cb_args.clicked_points_3d = clicked_points_3d;
+	cb_args.viewerPtr = pcl::visualization::PCLVisualizer::Ptr(viewer);
+	//viewer->registerPointPickingCallback(pp_callback, (void*)&cb_args);
+	outputInDebug("Shift+click on three floor points, then press 'Q'..." );
+
+	// Spin until 'Q' is pressed:
+	viewer->spin();
+
+}
+
+//æ ¹æ®ä¼ å…¥çš„indexåˆ¤æ–­æ˜¯å¦æ˜¯ä¸Šä¸‹å·¦å³ç§»åŠ¨
 void PointCloudVision::changeLocationOfObject(int index)
 {
 	if (!m_currentCloud->empty()) {
@@ -531,13 +595,13 @@ void PointCloudVision::changeLocationOfObject(int index)
 		PointT p_min, p_max;
 		double point[3];
 		pcl::getMinMax3D(*m_currentCloud, p_min, p_max);
-		//»ñµÃÕû¸ö×ø±êÏµµÄ¹æÄ£
+		//è·å¾—æ•´ä¸ªåæ ‡ç³»çš„è§„æ¨¡
 		double scale = getMaxValue(p_max, p_min);
 		outputInDebug(to_string(scale));
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed(new pcl::PointCloud<pcl::PointXYZ>);
 		Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
-		// ¶¨ÒåÔÚyÖáÉÏµÄÆ½ÒÆscale
+		// å®šä¹‰åœ¨yè½´ä¸Šçš„å¹³ç§»scale
 		if (index == 0)
 		{
 			transform_2.translation() << 0.0, scale*0.2, 0.0;
@@ -555,52 +619,52 @@ void PointCloudVision::changeLocationOfObject(int index)
 			transform_2.translation() << -scale*0.2, 0.0, 0.0;
 		}
 
-		//¿ªÊ¼±ä»»
+		//å¼€å§‹å˜æ¢
 		pcl::transformPointCloud(*m_currentCloud, *cloud_transformed, transform_2);
-		//ÖØĞÂ¸³Öµ
+		//é‡æ–°èµ‹å€¼
 		m_currentCloud = cloud_transformed;
 		pcl::copyPointCloud(*cloud_transformed, *m_currentCloud);
-		//ÖØĞÂÌí¼ÓµãÔÆ
+		//é‡æ–°æ·»åŠ ç‚¹äº‘
 		viewer->removeAllPointClouds();
 		viewer->addPointCloud(m_currentCloud);
-		//ÖØĞÂ¼ÆËã×ø±êÖá
+		//é‡æ–°è®¡ç®—åæ ‡è½´
 		Eigen::Vector4f cloudCentroid;
-		pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//¼ÆËãµãÔÆÖÊĞÄ
+		pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//è®¡ç®—ç‚¹äº‘è´¨å¿ƒ
 		viewer->removeAllCoordinateSystems();
 		viewer->addCoordinateSystem(scale*0.5, cloudCentroid[0], cloudCentroid[1], cloudCentroid[2], 0);
 		ui.qvtkWidget->update();
 	}
 	else {
-		ui.textBrowser->append("ÉèÖÃ´óĞ¡Ê§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("è®¾ç½®å¤§å°å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
 		ui.textBrowser->update(); QApplication::processEvents();
 	}
 }
 
-//ÉÏÒÆ
+//ä¸Šç§»
 void PointCloudVision::on_action_topMove_triggered()
 {
 	changeLocationOfObject(0);
 }
 
-//ÏÂÒÆ
+//ä¸‹ç§»
 void PointCloudVision::on_action_bottomMove_triggered()
 {
 	changeLocationOfObject(1);
 }
 
-//×óÒÆ
+//å·¦ç§»
 void PointCloudVision::on_action_leftMove_triggered()
 {
 	changeLocationOfObject(3);
 }
 
-//ÓÒÒÆ
+//å³ç§»
 void PointCloudVision::on_action_rightMove_triggered()
 {
 	changeLocationOfObject(2);
 }
 
-//¸Ä±äÊÓ½Ç
+//æ”¹å˜è§†è§’
 void changeViewOfObject(int index,boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer, PointCloudT::Ptr m_currentCloud,PointT p_min, PointT p_max, Ui::PointCloudVisionClass ui)
 {
 	double point[3];
@@ -609,44 +673,44 @@ void changeViewOfObject(int index,boost::shared_ptr<pcl::visualization::PCLVisua
 	double scale = getMaxValue(p_max, p_min);
 	outputInDebug(to_string(scale));
 	Eigen::Vector4f cloudCentroid;
-	pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//¼ÆËãµãÔÆÖÊĞÄ
+	pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//è®¡ç®—ç‚¹äº‘è´¨å¿ƒ
 	viewer->removeAllCoordinateSystems();
 	if (index == 0)
 	{
 		viewer->setCameraPosition(cloudCentroid[0], cloudCentroid[1] + scale * 5, cloudCentroid[2], 0, -0.5, 0, 0, 1, 0);
-		ui.textBrowser->append("¸©ÊÓÍ¼");
+		ui.textBrowser->append("ä¿¯è§†å›¾");
 	}
 	else if (index == 1)
 	{
 		viewer->setCameraPosition(cloudCentroid[0], cloudCentroid[1] - scale * 5, cloudCentroid[2], 0, 0.5, 0, 0, 1, 0);
-		ui.textBrowser->append("µ×ÊÓÍ¼");
+		ui.textBrowser->append("åº•è§†å›¾");
 	}
 	else if (index == 2)
 	{
 		viewer->setCameraPosition(cloudCentroid[0], cloudCentroid[1], cloudCentroid[2] + scale * 5, 0, 0, -0.5, 0, 1, 0);
-		ui.textBrowser->append("Ç°ÊÓÍ¼");
+		ui.textBrowser->append("å‰è§†å›¾");
 	}
 	else if (index == 3)
 	{
 		viewer->setCameraPosition(cloudCentroid[0], cloudCentroid[1], cloudCentroid[2] - scale * 5, 0, 0, 0.5, 0, 1, 0);
-		ui.textBrowser->append("ºóÊÓÍ¼");
+		ui.textBrowser->append("åè§†å›¾");
 	}
 	else if (index == 4)
 	{
-		viewer->setCameraPosition(cloudCentroid[0] - scale * 5, cloudCentroid[1], cloudCentroid[2], -0.5, 0, 0, 0, 1, 0);
-		ui.textBrowser->append("×óÊÓÍ¼");
+		viewer->setCameraPosition(cloudCentroid[0] - scale * 5, cloudCentroid[1], cloudCentroid[2], 0.5, 0, 0, 0, 1, 0);
+		ui.textBrowser->append("å·¦è§†å›¾");
 	}
 	else if (index == 5)
 	{
-		viewer->setCameraPosition(cloudCentroid[0] + scale * 5, cloudCentroid[1], cloudCentroid[2], 0.5, 0, 0, 0, 1, 0);
-		ui.textBrowser->append("×óÊÓÍ¼");
+		viewer->setCameraPosition(cloudCentroid[0] + scale * 5, cloudCentroid[1], cloudCentroid[2], -0.5, 0, 0, 0, 1, 0);
+		ui.textBrowser->append("å³è§†å›¾");
 	}
 	viewer->addCoordinateSystem(0.5*scale, cloudCentroid[0], cloudCentroid[1], cloudCentroid[2], 0);
 	ui.qvtkWidget->update();
 	ui.textBrowser->update(); QApplication::processEvents();
 }
 
-//¸©ÊÓÍ¼
+//ä¿¯è§†å›¾
 void PointCloudVision::on_action_up_triggered()
 {
 	if (!m_currentCloud->empty())
@@ -654,13 +718,13 @@ void PointCloudVision::on_action_up_triggered()
 		changeViewOfObject(0, viewer, m_currentCloud, p_min, p_max, ui);
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
 
-//Ç°ÊÓÍ¼
+//å‰è§†å›¾
 void PointCloudVision::on_action_front_triggered()
 {
 	if (!m_currentCloud->empty())
@@ -668,12 +732,12 @@ void PointCloudVision::on_action_front_triggered()
 		changeViewOfObject(2, viewer, m_currentCloud, p_min, p_max, ui);
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 }
 
-//×óÊÓÍ¼
+//å·¦è§†å›¾
 void PointCloudVision::on_action_left_triggered()
 {
 	if (!m_currentCloud->empty())
@@ -681,14 +745,14 @@ void PointCloudVision::on_action_left_triggered()
 		changeViewOfObject(4, viewer, m_currentCloud, p_min, p_max, ui);
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
   ui.textBrowser->update();QApplication::processEvents();
 
 
 	}
 }
 
-//ºóÊÓÍ¼
+//åè§†å›¾
 void PointCloudVision::on_action_back_triggered()
 {
 	if (!m_currentCloud->empty())
@@ -696,14 +760,14 @@ void PointCloudVision::on_action_back_triggered()
 		changeViewOfObject(3, viewer, m_currentCloud, p_min, p_max, ui);
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
   ui.textBrowser->update();QApplication::processEvents();
 
 
 	}
 }
 
-//ÓÒÊÓÍ¼
+//å³è§†å›¾
 void PointCloudVision::on_action_right_triggered()
 {
 	if (!m_currentCloud->empty())
@@ -711,12 +775,12 @@ void PointCloudVision::on_action_right_triggered()
 		changeViewOfObject(5, viewer, m_currentCloud, p_min, p_max, ui);
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 }
 
-//µ×ÊÓÍ¼
+//åº•è§†å›¾
 void PointCloudVision::on_action_bottom_triggered()
 {
 	if (!m_currentCloud->empty())
@@ -724,74 +788,74 @@ void PointCloudVision::on_action_bottom_triggered()
 		changeViewOfObject(1, viewer, m_currentCloud, p_min, p_max, ui);
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 }
 
-//Ç°Öá²â
+//å‰è½´æµ‹
 void PointCloudVision::on_action_frontIso_triggered()
 {
 	if (!m_currentCloud->empty())
 	{
 		viewer->setCameraPosition(p_min.x - 2 * maxLen, p_min.y - 2 * maxLen, p_max.z + 2 * maxLen, 0.5*(p_min.x + p_max.x), 0.5*(p_min.y + p_max.y), 0.5*(p_min.z + p_max.z), 1, 1, 0);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("Ç°Öá²â");
+		ui.textBrowser->append("å‰è½´æµ‹");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update(); QApplication::processEvents();
 	}
 }
 
-//ºóÖá²â
+//åè½´æµ‹
 void PointCloudVision::on_action_backIso_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		viewer->setCameraPosition(p_max.x + 2 * maxLen, p_max.y + 2 * maxLen, p_max.z + 2 * maxLen, 0.5*(p_min.x + p_max.x), 0.5*(p_min.y + p_max.y), 0.5*(p_min.z + p_max.z), -1, -1, 0);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ºóÖá²â");
+		ui.textBrowser->append("åè½´æµ‹");
 		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("Õ¹Ê¾Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("å±•ç¤ºå¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();QApplication::processEvents();
 	}
 
 }
 
-//ÉèÖÃµãÔÆÑÕÉ«
+//è®¾ç½®ç‚¹äº‘é¢œè‰²
 void PointCloudVision::on_action_setColor_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		QColor color = QColorDialog::getColor(Qt::white, this, "ÉèÖÃµãÔÆÑÕÉ«", QColorDialog::ShowAlphaChannel);
+		QColor color = QColorDialog::getColor(Qt::white, this, "è®¾ç½®ç‚¹äº‘é¢œè‰²", QColorDialog::ShowAlphaChannel);
 		viewer->removeAllPointClouds();
 		pcl::visualization::PointCloudColorHandlerCustom<PointT> singelColor(m_currentCloud, color.red(), color.green(), color.blue());
 		viewer->addPointCloud(m_currentCloud, singelColor, "myCloud", 0);
 		viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_OPACITY, color.alpha()*1.0 / 255, "myCloud");
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ÉèÖÃÑÕÉ«³É¹¦");
+		ui.textBrowser->append("è®¾ç½®é¢œè‰²æˆåŠŸ");
 		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("ÉèÖÃÑÕÉ«Ê§°Ü£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("è®¾ç½®é¢œè‰²å¤±è´¥ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();
 		QApplication::processEvents();
 	}
 
 }
 
-//ÉèÖÃ¸ß¶ÈäÖÈ¾
+//è®¾ç½®é«˜åº¦æ¸²æŸ“
 void PointCloudVision::on_action_heightRamp_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		heightRampDlg.show();
 	}
 	else {
-		ui.textBrowser->append("ÉèÖÃ¸ß¶ÈäÖÈ¾£ºÎ´ÉèÖÃµãÔÆ");
+		ui.textBrowser->append("è®¾ç½®é«˜åº¦æ¸²æŸ“ï¼šæœªè®¾ç½®ç‚¹äº‘");
 		ui.textBrowser->update();
 		QApplication::processEvents();
 
@@ -799,14 +863,14 @@ void PointCloudVision::on_action_heightRamp_triggered()
 	}
 }
 
-//½øĞĞ¸ß¶ÈäÖÈ¾
+//è¿›è¡Œé«˜åº¦æ¸²æŸ“
 void PointCloudVision::setHeightRamp(int dir, double height)
 {
 	
-	ui.textBrowser->append("¿ªÊ¼¸ß¶ÈäÖÈ¾");
+	ui.textBrowser->append("å¼€å§‹é«˜åº¦æ¸²æŸ“");
 	ui.textBrowser->update();
 	QApplication::processEvents();
-	//Çå¿ÕµãÔÆ
+	//æ¸…ç©ºç‚¹äº‘
 	viewer->removeAllPointClouds();
 	m_heightCloudList.clear();
 
@@ -841,42 +905,42 @@ void PointCloudVision::setHeightRamp(int dir, double height)
 	{
 		PointCloudT::Ptr cloudTemp(new PointCloudT());
 
-		pcl::PassThrough<PointT> pass;			//Ö±Í¨ÂË²¨Æ÷¶ÔÏó
-		pass.setInputCloud(m_currentCloud);		//ÊäÈëµãÔÆ
-		pass.setFilterFieldName(field);			//ÉèÖÃ¹ıÂË×Ö¶Î
-		pass.setFilterLimits(i, i + height);	//ÉèÖÃ¹ıÂË·¶Î§
-		pass.setFilterLimitsNegative(false);	//ÉèÖÃ±£Áô×Ö¶Î
-		pass.filter(*cloudTemp);				//Ö´ĞĞÂË²¨
+		pcl::PassThrough<PointT> pass;			//ç›´é€šæ»¤æ³¢å™¨å¯¹è±¡
+		pass.setInputCloud(m_currentCloud);		//è¾“å…¥ç‚¹äº‘
+		pass.setFilterFieldName(field);			//è®¾ç½®è¿‡æ»¤å­—æ®µ
+		pass.setFilterLimits(i, i + height);	//è®¾ç½®è¿‡æ»¤èŒƒå›´
+		pass.setFilterLimitsNegative(false);	//è®¾ç½®ä¿ç•™å­—æ®µ
+		pass.filter(*cloudTemp);				//æ‰§è¡Œæ»¤æ³¢
 
 		i += height;
 
 		m_heightCloudList.append(cloudTemp);
 	}
 
-	//·Ö¶ÎäÖÈ¾
+	//åˆ†æ®µæ¸²æŸ“
 	for (int j = 0; j < m_heightCloudList.size();j++)
 	{
 		pcl::visualization::PointCloudColorHandlerGenericField<PointT> fieldColor(m_heightCloudList.at(j), field);
 		std::string index = std::to_string(j);
 		viewer->addPointCloud(m_heightCloudList.at(j), fieldColor, index);
 	}
-	ui.textBrowser->append("¸ß¶ÈäÖÈ¾³É¹¦");
+	ui.textBrowser->append("é«˜åº¦æ¸²æŸ“æˆåŠŸ");
 	ui.textBrowser->update();
 
 
 }
 
-//°Ë²æÊ÷;
+//å…«å‰æ ‘;
 void PointCloudVision::on_action_octree_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		octreeDialog.show();
 
-		//¹¹½¨°Ë²æÊ÷;
+		//æ„å»ºå…«å‰æ ‘;
 
 	}
 	else {
-		ui.textBrowser->append("°Ë²æÊ÷ËÑË÷£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("å…«å‰æ ‘æœç´¢ï¼šæœªåŠ è½½ç‚¹äº‘");
 		ui.textBrowser->update(); 
 		QApplication::processEvents();
 	}
@@ -884,50 +948,50 @@ void PointCloudVision::on_action_octree_triggered()
 
 
 
-//¹¹½¨°Ë²æÊ÷£»
-//ÊäÈë£ºËÑË÷µãÔÆ¡¢·Ö±æÂÊ
-//Êä³ö£º°Ë²æÊ÷£»
+//æ„å»ºå…«å‰æ ‘ï¼›
+//è¾“å…¥ï¼šæœç´¢ç‚¹äº‘ã€åˆ†è¾¨ç‡
+//è¾“å‡ºï¼šå…«å‰æ ‘ï¼›
 pcl::octree::OctreePointCloudSearch<PointT> createOctree(pcl::PointCloud<PointT>::Ptr cloud, double resolution)
 {
 	pcl::octree::OctreePointCloudSearch <PointT> tree(resolution);
 	tree.setInputCloud(cloud);
-	//¶¨Òå±ß½ç¿ò
+	//å®šä¹‰è¾¹ç•Œæ¡†
 	tree.defineBoundingBox();
 	tree.addPointsFromInputCloud();
 	return tree;
 }
 
 
-//°Ë²æÊ÷ÌåËØËÑË÷
-//ÊäÈë£ºÏñËØ£»ËÑË÷µã×ø±ê;
+//å…«å‰æ ‘ä½“ç´ æœç´¢
+//è¾“å…¥ï¼šåƒç´ ï¼›æœç´¢ç‚¹åæ ‡;
 void PointCloudVision::octree_vsearch(double resolution, double x, double y, double z, int r, int g, int b)
 {
-	ui.textBrowser->append("¿ªÊ¼ËÑË÷\n");
+	ui.textBrowser->append("å¼€å§‹æœç´¢\n");
 	ui.textBrowser->update();
 	QApplication::processEvents();
 
 	viewer->removeAllPointClouds();
-	//¹¹½¨°Ë²æÊ÷;
+	//æ„å»ºå…«å‰æ ‘;
 	pcl::octree::OctreePointCloudSearch<PointT> tree = createOctree(m_currentCloud, resolution);
-	//¶¨ÒåËÑË÷µã
-	//ÆğÊ¼ËÑË÷µã£»
+	//å®šä¹‰æœç´¢ç‚¹
+	//èµ·å§‹æœç´¢ç‚¹ï¼›
 	PointT searchPoint;
 	searchPoint.x = x;
 	searchPoint.y = y;
 	searchPoint.z = z;
-	//Çå¿ÕµãÏÂ±ê£»
+	//æ¸…ç©ºç‚¹ä¸‹æ ‡ï¼›
 	std::vector<int> pointIndex;
 
 
-	//ËÑË÷;
+	//æœç´¢;
 	if (tree.voxelSearch(searchPoint, pointIndex))
 	{
 	
 		for (int i = 0; i < pointIndex.size(); i++)
 		{
 			
-			string s = "µÚ" + to_string(i + 1) + "¸öÁÙ½üµã:\n" + "x=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].x) + "\n" + "y=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].y) + "\n" + "z=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].z) + "\n";
-			/*cout << "µÚ" << i + 1 << "¸öÁÙ½üµã£º\n"
+			string s = "ç¬¬" + to_string(i + 1) + "ä¸ªä¸´è¿‘ç‚¹:\n" + "x=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].x) + "\n" + "y=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].y) + "\n" + "z=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].z) + "\n";
+			/*cout << "ç¬¬" << i + 1 << "ä¸ªä¸´è¿‘ç‚¹ï¼š\n"
 				<< "x=" << tree.getInputCloud()->points[pointIndex[i]].x << "\n"
 				<< "y=" << tree.getInputCloud()->points[pointIndex[i]].y << "\n"
 				<< "z=" << tree.getInputCloud()->points[pointIndex[i]].z << "\n"
@@ -936,8 +1000,8 @@ void PointCloudVision::octree_vsearch(double resolution, double x, double y, dou
 			ui.textBrowser->update(); 
 			QApplication::processEvents();
 		} 
-		/*-------------------------¿ÉÊÓ»¯-------------------------------------------*/
-		//Îª²éÕÒµ½µã´´½¨ĞÂµãÔÆ;
+		/*-------------------------å¯è§†åŒ–-------------------------------------------*/
+		//ä¸ºæŸ¥æ‰¾åˆ°ç‚¹åˆ›å»ºæ–°ç‚¹äº‘;
 		pcl::PointCloud<PointT>::Ptr searchCloud(new pcl::PointCloud<PointT>);
 		searchCloud->width = m_currentCloud->width;
 		searchCloud->height = m_currentCloud->height;
@@ -949,7 +1013,7 @@ void PointCloudVision::octree_vsearch(double resolution, double x, double y, dou
 
 		}
 
-		//Ìí¼Óµ½´°¿Ú
+		//æ·»åŠ åˆ°çª—å£
 		viewer->addPointCloud(m_currentCloud);
 
 		setCoordinate(viewer, m_currentCloud);
@@ -961,51 +1025,51 @@ void PointCloudVision::octree_vsearch(double resolution, double x, double y, dou
 	}
 	else
 	{
-		ui.textBrowser->append("Î´ËÑË÷µ½µã");
+		ui.textBrowser->append("æœªæœç´¢åˆ°ç‚¹");
 		ui.textBrowser->update();
 		QApplication::processEvents();
 	}
 }
 
-//°Ë²æÊ÷k½üÁÚËÑË÷
+//å…«å‰æ ‘kè¿‘é‚»æœç´¢
 
-//Èı½ÇÍø¸ñ»¯;
+//ä¸‰è§’ç½‘æ ¼åŒ–;
 void PointCloudVision::on_action_triangle_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼Èı½ÇÍø¸ñ»¯");
+		ui.textBrowser->append("å¼€å§‹ä¸‰è§’ç½‘æ ¼åŒ–");
 		ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		viewer->removeAllShapes();
-		//·¨Ïß¹À¼Æ¶ÔÏó
+		//æ³•çº¿ä¼°è®¡å¯¹è±¡
 		pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> n;
-		//´æ´¢¹À¼ÆµÄ·¨Ïß
+		//å­˜å‚¨ä¼°è®¡çš„æ³•çº¿
 		pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-		//¶¨ÒåkdÊ÷Ö¸Õë
+		//å®šä¹‰kdæ ‘æŒ‡é’ˆ
 		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
 		tree->setInputCloud(m_currentCloud);
 		n.setInputCloud(m_currentCloud);
 		n.setSearchMethod(tree);
 		n.setKSearch(20);
-		//¹À¼Æ·¨Ïß´æ´¢µ½ÆäÖĞ
+		//ä¼°è®¡æ³•çº¿å­˜å‚¨åˆ°å…¶ä¸­
 		n.compute(*normals);//Concatenate the XYZ and normal fields*
 		pcl::PointCloud<pcl::PointNormal>::Ptr cloud_width_normals(new pcl::PointCloud<pcl::PointNormal>);
-		//Á´½Ó×Ö¶Î
+		//é“¾æ¥å­—æ®µ
 		pcl::concatenateFields(*m_currentCloud, *normals, *cloud_width_normals);
 
-		//¶¨ÒåËÑË÷Ê÷¶ÔÏó
+		//å®šä¹‰æœç´¢æ ‘å¯¹è±¡
 		pcl::search::KdTree<pcl::PointNormal>::Ptr tree2(new pcl::search::KdTree<pcl::PointNormal>);
-		//µãÔÆ¹¹½¨ËÑË÷Ê÷
+		//ç‚¹äº‘æ„å»ºæœç´¢æ ‘
 		tree2->setInputCloud(cloud_width_normals);
 
-		//¶¨ÒåÈı½Ç»¯¶ÔÏó
+		//å®šä¹‰ä¸‰è§’åŒ–å¯¹è±¡
 		pcl::GreedyProjectionTriangulation<pcl::PointNormal> gp3;
-		//´æ´¢×îÖÕÈı½Ç»¯µÄÍøÂçÄ£ĞÍ
-		pcl::PolygonMesh triangles;//ÉèÖÃÁ¬½ÓµãÖ®¼äµÄ×î´ó¾àÀë£¬£¨¼´ÊÇÈı½ÇĞÎ×î´ó±ß³¤£©
+		//å­˜å‚¨æœ€ç»ˆä¸‰è§’åŒ–çš„ç½‘ç»œæ¨¡å‹
+		pcl::PolygonMesh triangles;//è®¾ç½®è¿æ¥ç‚¹ä¹‹é—´çš„æœ€å¤§è·ç¦»ï¼Œï¼ˆå³æ˜¯ä¸‰è§’å½¢æœ€å¤§è¾¹é•¿ï¼‰
 		gp3.setSearchRadius(200.0f);
-		//ÉèÖÃ¸÷ÖÖ²ÎÊıÖµ
+		//è®¾ç½®å„ç§å‚æ•°å€¼
 		gp3.setMu(2.5f);
 		gp3.setMaximumNearestNeighbors(100);
 		gp3.setMaximumSurfaceAngle(M_PI_4);
@@ -1013,37 +1077,37 @@ void PointCloudVision::on_action_triangle_triggered()
 		gp3.setMaximumAngle(2 * M_PI / 3);
 		gp3.setNormalConsistency(false);
 
-		//ÉèÖÃËÑË÷·½·¨ºÍÊäÈëµãÔÆ
+		//è®¾ç½®æœç´¢æ–¹æ³•å’Œè¾“å…¥ç‚¹äº‘
 		gp3.setInputCloud(cloud_width_normals);
 		gp3.setSearchMethod(tree2);
 
-		//Ö´ĞĞÖØ¹¹£¬½á¹û±£´æÔÚtrianglesÖĞ
+		//æ‰§è¡Œé‡æ„ï¼Œç»“æœä¿å­˜åœ¨trianglesä¸­
 		gp3.reconstruct(triangles);
 		viewer->addPolygonMesh(triangles, "my");
 
 		//setCoordinate(viewer, m_currentCloud);
 		maxLen = getMaxValue(p_max, p_min);
-		//ÖØÉèÊÓ½Ç
+		//é‡è®¾è§†è§’
 		viewer->resetCamera();
 
-		//Ë¢ĞÂ´°¿Ú
+		//åˆ·æ–°çª—å£
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("Èı½ÇÍø¸ñ»¯³É¹¦");
+		ui.textBrowser->append("ä¸‰è§’ç½‘æ ¼åŒ–æˆåŠŸ");
 		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("Èı½ÇÍø¸ñ»¯Ê§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("ä¸‰è§’ç½‘æ ¼åŒ–å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	
 }
-//ÌØÕ÷µãÌáÈ¡;
+//ç‰¹å¾ç‚¹æå–;
 void PointCloudVision::on_action_feature_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼ÌØÕ÷µãÌáÈ¡");
+		ui.textBrowser->append("å¼€å§‹ç‰¹å¾ç‚¹æå–");
 		ui.textBrowser->update();QApplication::processEvents();
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
@@ -1056,7 +1120,7 @@ void PointCloudVision::on_action_feature_triggered()
 		bool rotation_invariant = true;
 		angular_resolution = pcl::deg2rad(angular_resolution);
 
-		//´ò¿ªÒ»¸ö´ÅÅÌÖĞµÄ.pcdÎÄ¼ş  µ«ÊÇÈç¹ûÃ»ÓĞÖ¸¶¨¾Í»á×Ô¶¯Éú³É
+		//æ‰“å¼€ä¸€ä¸ªç£ç›˜ä¸­çš„.pcdæ–‡ä»¶  ä½†æ˜¯å¦‚æœæ²¡æœ‰æŒ‡å®šå°±ä¼šè‡ªåŠ¨ç”Ÿæˆ
 		pcl::PointCloud<pcl::PointXYZ>::Ptr    point_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointCloud<pcl::PointXYZ>& point_cloud = *point_cloud_ptr;
 		pcl::PointCloud<pcl::PointWithViewpoint> far_ranges;
@@ -1075,7 +1139,7 @@ void PointCloudVision::on_action_feature_triggered()
 		}
 		point_cloud.width = 1;
 		point_cloud.height = M;
-		//´ÓµãÔÆÖĞ½¨Á¢Éú³ÉÉî¶ÈÍ¼
+		//ä»ç‚¹äº‘ä¸­å»ºç«‹ç”Ÿæˆæ·±åº¦å›¾
 		float noise_level = 0.0;
 		float min_range = 0.0f;
 		int border_size = 1;
@@ -1087,7 +1151,7 @@ void PointCloudVision::on_action_feature_triggered()
 		if (setUnseenToMaxRange)
 			range_image.setUnseenToMaxRange();
 
-		//´ò¿ª3D viewer²¢¼ÓÈëµãÔÆ
+		//æ‰“å¼€3D viewerå¹¶åŠ å…¥ç‚¹äº‘
 		//pcl::visualization::PCLVisualizer viewer("3D Viewer");
 		//viewer.setBackgroundColor(0, 0, 0);
 		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointWithRange> range_image_color_handler(range_image_ptr, 0, 0, 0);
@@ -1096,18 +1160,18 @@ void PointCloudVision::on_action_feature_triggered()
 		viewer->initCameraParameters();
 		//viewer->resetCamera();
 		setViewerPose(*viewer, range_image.getTransformationToWorldSystem());
-		//ÌáÈ¡NARFÌØÕ÷
-		pcl::RangeImageBorderExtractor range_image_border_extractor;    //ÉêÃ÷Éî¶ÈÍ¼±ßÔµÌáÈ¡Æ÷
-		pcl::NarfKeypoint narf_keypoint_detector;                       //narf_keypoint_detectorÎªµãÔÆ¶ÔÏó
+		//æå–NARFç‰¹å¾
+		pcl::RangeImageBorderExtractor range_image_border_extractor;    //ç”³æ˜æ·±åº¦å›¾è¾¹ç¼˜æå–å™¨
+		pcl::NarfKeypoint narf_keypoint_detector;                       //narf_keypoint_detectorä¸ºç‚¹äº‘å¯¹è±¡
 
 		narf_keypoint_detector.setRangeImageBorderExtractor(&range_image_border_extractor);
 		narf_keypoint_detector.setRangeImage(&range_image);
-		narf_keypoint_detector.getParameters().support_size = support_size;    //»ñµÃÌØÕ÷ÌáÈ¡µÄ´óĞ¡
+		narf_keypoint_detector.getParameters().support_size = support_size;    //è·å¾—ç‰¹å¾æå–çš„å¤§å°
 
 		pcl::PointCloud<int> keypoint_indices;
 		narf_keypoint_detector.compute(keypoint_indices);
 
-		//ÔÚ3DviewerÏÔÊ¾ÌáÈ¡µÄÌØÕ÷ĞÅÏ¢
+		//åœ¨3Dvieweræ˜¾ç¤ºæå–çš„ç‰¹å¾ä¿¡æ¯
 		pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints_ptr(new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointCloud<pcl::PointXYZ>& keypoints = *keypoints_ptr;
 		keypoints.points.resize(keypoint_indices.points.size());
@@ -1117,71 +1181,71 @@ void PointCloudVision::on_action_feature_triggered()
 		viewer->addPointCloud<pcl::PointXYZ>(keypoints_ptr, keypoints_color_handler, "keypoints");
 		viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "keypoints");
 
-		//ÔÚ¹Ø¼üµãÌáÈ¡NARFÃèÊö×Ó
+		//åœ¨å…³é”®ç‚¹æå–NARFæè¿°å­
 		std::vector<int> keypoint_indices2;
 		keypoint_indices2.resize(keypoint_indices.points.size());
 		for (unsigned int i = 0; i < keypoint_indices.size(); ++i)
-			keypoint_indices2[i] = keypoint_indices.points[i];					//½¨Á¢NARF¹Ø¼üµãµÄË÷ÒıÏòÁ¿£¬´ËÊ¸Á¿×÷ÎªNARFÌØÕ÷¼ÆËãµÄÊäÈëÀ´Ê¹ÓÃ
+			keypoint_indices2[i] = keypoint_indices.points[i];					//å»ºç«‹NARFå…³é”®ç‚¹çš„ç´¢å¼•å‘é‡ï¼Œæ­¤çŸ¢é‡ä½œä¸ºNARFç‰¹å¾è®¡ç®—çš„è¾“å…¥æ¥ä½¿ç”¨
 
-		pcl::NarfDescriptor narf_descriptor(&range_image, &keypoint_indices2);	//´´½¨narf_descriptor¶ÔÏó¡£²¢¸øÁË´Ë¶ÔÏóÊäÈëÊı¾İ£¨ÌØÕ÷µãË÷ÒıºÍÉî¶ÈÏñ£©
-		narf_descriptor.getParameters().support_size = support_size;			//support_sizeÈ·¶¨¼ÆËãÃèÊö×ÓÊ±¿¼ÂÇµÄÇøÓò´óĞ¡
-		narf_descriptor.getParameters().rotation_invariant = rotation_invariant;    //ÉèÖÃĞı×ª²»±äµÄNARFÃèÊö×Ó
-		pcl::PointCloud<pcl::Narf36> narf_descriptors;							//´´½¨Narf36µÄµãÀàĞÍÊäÈëµãÔÆ¶ÔÏó²¢½øĞĞÊµ¼Ê¼ÆËã
-		narf_descriptor.compute(narf_descriptors);								//¼ÆËãÃèÊö×Ó
+		pcl::NarfDescriptor narf_descriptor(&range_image, &keypoint_indices2);	//åˆ›å»ºnarf_descriptorå¯¹è±¡ã€‚å¹¶ç»™äº†æ­¤å¯¹è±¡è¾“å…¥æ•°æ®ï¼ˆç‰¹å¾ç‚¹ç´¢å¼•å’Œæ·±åº¦åƒï¼‰
+		narf_descriptor.getParameters().support_size = support_size;			//support_sizeç¡®å®šè®¡ç®—æè¿°å­æ—¶è€ƒè™‘çš„åŒºåŸŸå¤§å°
+		narf_descriptor.getParameters().rotation_invariant = rotation_invariant;    //è®¾ç½®æ—‹è½¬ä¸å˜çš„NARFæè¿°å­
+		pcl::PointCloud<pcl::Narf36> narf_descriptors;							//åˆ›å»ºNarf36çš„ç‚¹ç±»å‹è¾“å…¥ç‚¹äº‘å¯¹è±¡å¹¶è¿›è¡Œå®é™…è®¡ç®—
+		narf_descriptor.compute(narf_descriptors);								//è®¡ç®—æè¿°å­
 		setCoordinate(viewer, m_currentCloud);
 		maxLen = getMaxValue(p_max, p_min);
-		//ÖØÉèÊÓ½Ç
+		//é‡è®¾è§†è§’
 		viewer->resetCamera();
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ÌØÕ÷µãÌáÈ¡³É¹¦");
+		ui.textBrowser->append("ç‰¹å¾ç‚¹æå–æˆåŠŸ");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("ÌØÕ÷µãÌáÈ¡Ê§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("ç‰¹å¾ç‚¹æå–å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	
 }
-//ÇøÓòÔö³¤·Ö¸î;
+//åŒºåŸŸå¢é•¿åˆ†å‰²;
 void PointCloudVision::on_action_grow_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼ÇøÓòÔö³¤·Ö¸î");
+		ui.textBrowser->append("å¼€å§‹åŒºåŸŸå¢é•¿åˆ†å‰²");
 		ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		viewer->removeAllShapes();
-		//ÉèÖÃËÑË÷µÄ·½Ê½»òÕßËµÊÇ½á¹¹
+		//è®¾ç½®æœç´¢çš„æ–¹å¼æˆ–è€…è¯´æ˜¯ç»“æ„
 		pcl::search::Search<pcl::PointXYZ>::Ptr tree = boost::shared_ptr<pcl::search::Search<pcl::PointXYZ> >(new pcl::search::KdTree<pcl::PointXYZ>);
-		//Çó·¨Ïß
+		//æ±‚æ³•çº¿
 		pcl::PointCloud <pcl::Normal>::Ptr normals(new pcl::PointCloud <pcl::Normal>);
 		pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimator;
 		normal_estimator.setSearchMethod(tree);
 		normal_estimator.setInputCloud(m_currentCloud);
 		normal_estimator.setKSearch(50);
 		normal_estimator.compute(*normals);
-		//Ö±Í¨ÂË²¨ÔÚZÖáµÄ0µ½1Ã×Ö®¼ä
+		//ç›´é€šæ»¤æ³¢åœ¨Zè½´çš„0åˆ°1ç±³ä¹‹é—´
 		pcl::IndicesPtr indices(new std::vector <int>);
 		pcl::PassThrough<pcl::PointXYZ> pass;
 		pass.setInputCloud(m_currentCloud);
 		pass.setFilterFieldName("z");
 		pass.setFilterLimits(0.0, 1.0);
 		pass.filter(*indices);
-		//¾ÛÀà¶ÔÏó<µã£¬·¨Ïß>
-		pcl::RegionGrowing<pcl::PointXYZ, pcl::Normal> reg;			//Ê×ÏÈ½¨Á¢reg¼Ä´æÆ÷(ÇøÓòÔö³¤µÄ¶ÔÏó£©
-		reg.setMinClusterSize(50);									//×îĞ¡µÄ¾ÛÀàµÄµãÊı(Ğ¡ÓÚÕâ²ÎÊıµÄÆ½Ãæ±»ºöÂÔ²»¼Æ£©
-		reg.setMaxClusterSize(1000000);								//×î´óµÄ(Ò»°ãËæ±ãÉèÖÃ£©
-		reg.setSearchMethod(tree);									//ËÑË÷·½Ê½(²ÉÓÃµÄÄ¬ÈÏÊÇK¡ªdÊ÷·¨£©
-		reg.setNumberOfNeighbours(30);								//ÉèÖÃËÑË÷µÄÁÚÓòµãµÄ¸öÊı£¬ÖÜÎ§¶àÉÙ¸öµã¾ö¶¨ÕâÊÇÒ»¸öÆ½Ãæ(¾ö¶¨Èİ´íÂÊ£¬ÉèÖÃ´óÊ±ÓĞÇãĞ±Ò²¿É½ÓÊÜ£¬ÉèÖÃĞ¡Ê±¼ì²âµ½µÄÆ½Ãæ»áºÜĞ¡£©
-		reg.setInputCloud(m_currentCloud);							//ÊäÈëµã
-		reg.setInputNormals(normals);								//ÊäÈëµÄ·¨Ïß
-		reg.setSmoothnessThreshold(3.0 / 180.0 * M_PI);				//ÉèÖÃÆ½»¬¶È(ÉèÖÃÁ½¸ö·¨ÏßÔÚ¶à´ó¼Ğ½ÇÄÚ¿Éµ±×öÊÇ¹²ÃæµÄ£©
-		reg.setCurvatureThreshold(1.0);								//ÉèÖÃÇúÂÊµÄãĞÖµ
-																	//×îºóÒ²ÊÇÒ»¸öÍäÇúµÄãĞÖµ£¬Õâ¸ö¾ö¶¨ÁË±Èµ±Ç°¿¼²ìµÄµãºÍÆ½¾ùµÄ·¨Ïß½Ç¶È£¬¾ö¶¨ÊÇ·ñ»¹ÓĞ¼ÌĞøÌ½Ë÷ÏÂÈ¥µÄ±ØÒª¡£
-																	//£¨Ò²¾ÍÊÇ¼ÙÉèÃ¿¸öµã¶¼ÊÇÆ½ÎÈÍäÇúµÄ£¬ÄÇÃ´normalµÄ¼Ğ½Ç¶¼ºÜĞ¡£¬µ«ÊÇÊ±¼ä³¤ÁËÆ«ÒÆµÄ¾Í´óÁË£¬Õâ¸ö²ÎÊı¾ÍÊÇÏŞÖÆÕâ¸öÓÃµÄ£©
+		//èšç±»å¯¹è±¡<ç‚¹ï¼Œæ³•çº¿>
+		pcl::RegionGrowing<pcl::PointXYZ, pcl::Normal> reg;			//é¦–å…ˆå»ºç«‹regå¯„å­˜å™¨(åŒºåŸŸå¢é•¿çš„å¯¹è±¡ï¼‰
+		reg.setMinClusterSize(50);									//æœ€å°çš„èšç±»çš„ç‚¹æ•°(å°äºè¿™å‚æ•°çš„å¹³é¢è¢«å¿½ç•¥ä¸è®¡ï¼‰
+		reg.setMaxClusterSize(1000000);								//æœ€å¤§çš„(ä¸€èˆ¬éšä¾¿è®¾ç½®ï¼‰
+		reg.setSearchMethod(tree);									//æœç´¢æ–¹å¼(é‡‡ç”¨çš„é»˜è®¤æ˜¯Kâ€”dæ ‘æ³•ï¼‰
+		reg.setNumberOfNeighbours(30);								//è®¾ç½®æœç´¢çš„é‚»åŸŸç‚¹çš„ä¸ªæ•°ï¼Œå‘¨å›´å¤šå°‘ä¸ªç‚¹å†³å®šè¿™æ˜¯ä¸€ä¸ªå¹³é¢(å†³å®šå®¹é”™ç‡ï¼Œè®¾ç½®å¤§æ—¶æœ‰å€¾æ–œä¹Ÿå¯æ¥å—ï¼Œè®¾ç½®å°æ—¶æ£€æµ‹åˆ°çš„å¹³é¢ä¼šå¾ˆå°ï¼‰
+		reg.setInputCloud(m_currentCloud);							//è¾“å…¥ç‚¹
+		reg.setInputNormals(normals);								//è¾“å…¥çš„æ³•çº¿
+		reg.setSmoothnessThreshold(3.0 / 180.0 * M_PI);				//è®¾ç½®å¹³æ»‘åº¦(è®¾ç½®ä¸¤ä¸ªæ³•çº¿åœ¨å¤šå¤§å¤¹è§’å†…å¯å½“åšæ˜¯å…±é¢çš„ï¼‰
+		reg.setCurvatureThreshold(1.0);								//è®¾ç½®æ›²ç‡çš„é˜ˆå€¼
+																	//æœ€åä¹Ÿæ˜¯ä¸€ä¸ªå¼¯æ›²çš„é˜ˆå€¼ï¼Œè¿™ä¸ªå†³å®šäº†æ¯”å½“å‰è€ƒå¯Ÿçš„ç‚¹å’Œå¹³å‡çš„æ³•çº¿è§’åº¦ï¼Œå†³å®šæ˜¯å¦è¿˜æœ‰ç»§ç»­æ¢ç´¢ä¸‹å»çš„å¿…è¦ã€‚
+																	//ï¼ˆä¹Ÿå°±æ˜¯å‡è®¾æ¯ä¸ªç‚¹éƒ½æ˜¯å¹³ç¨³å¼¯æ›²çš„ï¼Œé‚£ä¹ˆnormalçš„å¤¹è§’éƒ½å¾ˆå°ï¼Œä½†æ˜¯æ—¶é—´é•¿äº†åç§»çš„å°±å¤§äº†ï¼Œè¿™ä¸ªå‚æ•°å°±æ˜¯é™åˆ¶è¿™ä¸ªç”¨çš„ï¼‰
 
 		std::vector <pcl::PointIndices> clusters;
 		reg.extract(clusters);
@@ -1203,16 +1267,16 @@ void PointCloudVision::on_action_grow_triggered()
 		cloud->height = M;
 		setCoordinate(viewer, m_currentCloud);
 		maxLen = getMaxValue(p_max, p_min);
-		//ÖØÉèÊÓ½Ç
+		//é‡è®¾è§†è§’
 		viewer->resetCamera();
-		//Ë¢ĞÂ´°¿Ú
+		//åˆ·æ–°çª—å£
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ÇøÓòÔö³¤·Ö¸î³É¹¦");
+		ui.textBrowser->append("åŒºåŸŸå¢é•¿åˆ†å‰²æˆåŠŸ");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("ÇøÓòÔö³¤·Ö¸îÊ§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("åŒºåŸŸå¢é•¿åˆ†å‰²å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
@@ -1221,7 +1285,7 @@ void PointCloudVision::on_action_grow_triggered()
 //PCA-ICP
 void PointCloudVision::on_action_icp_triggered()
 {
-	ui.textBrowser->append("¹¦ÄÜÎ´¶¨Òå");
+	ui.textBrowser->append("åŠŸèƒ½æœªå®šä¹‰");
 	ui.textBrowser->update();
 
 }
@@ -1229,103 +1293,103 @@ void PointCloudVision::on_action_icp_triggered()
 //SCALE-ICP
 void PointCloudVision::on_action_action_scale_icp_triggered()
 {
-	ui.textBrowser->append("¹¦ÄÜÎ´¶¨Òå");
+	ui.textBrowser->append("åŠŸèƒ½æœªå®šä¹‰");
 	ui.textBrowser->update();
 
 }
 
-//ÌåËØÂË²¨
+//ä½“ç´ æ»¤æ³¢
 void PointCloudVision::on_action_3_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼ÌåËØÂË²¨");
+		ui.textBrowser->append("å¼€å§‹ä½“ç´ æ»¤æ³¢");
   ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		viewer->removeAllShapes();
 
-		pcl::VoxelGrid<pcl::PointXYZ> vg;		//´´½¨ÂË²¨Æ÷¶ÔÏó
-		vg.setInputCloud(m_currentCloud);				//ÉèÖÃ´ıÂË²¨µãÔÆ
-		vg.setLeafSize(1.15f, 1.15f, 1.15f);	//ÉèÖÃÌåËØ´óĞ¡
-		vg.filter(*m_currentCloud);			//Ö´ĞĞÂË²¨£¬±£´æÂË²¨½á¹ûÓÚcloud_filtered
+		pcl::VoxelGrid<pcl::PointXYZ> vg;		//åˆ›å»ºæ»¤æ³¢å™¨å¯¹è±¡
+		vg.setInputCloud(m_currentCloud);				//è®¾ç½®å¾…æ»¤æ³¢ç‚¹äº‘
+		vg.setLeafSize(1.15f, 1.15f, 1.15f);	//è®¾ç½®ä½“ç´ å¤§å°
+		vg.filter(*m_currentCloud);			//æ‰§è¡Œæ»¤æ³¢ï¼Œä¿å­˜æ»¤æ³¢ç»“æœäºcloud_filtered
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("ÌåËØÂË²¨³É¹¦");
+		ui.textBrowser->append("ä½“ç´ æ»¤æ³¢æˆåŠŸ");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("ÌåËØÂË²¨Ê§°Ü£ºÎ´¼ÓÔØµãÔÆ");
+		ui.textBrowser->append("ä½“ç´ æ»¤æ³¢å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
 
-//Ö±Í¨ÂË²¨;
+//ç›´é€šæ»¤æ³¢;
 void PointCloudVision::on_action_4_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼Ö±Í¨ÂË²¨");
+		ui.textBrowser->append("å¼€å§‹ç›´é€šæ»¤æ³¢");
   ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		viewer->removeAllShapes();
 
-		pcl::PassThrough<pcl::PointXYZ> pass;	//´´½¨Ö±Í¨ÂË²¨Æ÷¶ÔÏó
-		pass.setInputCloud(m_currentCloud);		        //ÉèÖÃÊäÈëµÄµãÔÆ
-		pass.setFilterFieldName("z");           //ÉèÖÃ¹ıÂËÊ±ËùĞèÒªµãÔÆÀàĞÍÎªZ×Ö¶Î
-		pass.setFilterLimits(-0.1, 10);         //ÉèÖÃÔÚ¹ıÂË×Ö¶ÎµÄ·¶Î§
-		pass.setFilterLimitsNegative(true);     //ÉèÖÃ±£Áô»¹ÊÇ¹ıÂËµô×Ö¶Î·¶Î§ÄÚµÄµã£¬ÉèÖÃÎªtrue±íÊ¾¹ıÂËµô×Ö¶Î·¶Î§ÄÚµÄµã
-		pass.filter(*m_currentCloud);		    //Ö´ĞĞÂË²¨
+		pcl::PassThrough<pcl::PointXYZ> pass;	//åˆ›å»ºç›´é€šæ»¤æ³¢å™¨å¯¹è±¡
+		pass.setInputCloud(m_currentCloud);		        //è®¾ç½®è¾“å…¥çš„ç‚¹äº‘
+		pass.setFilterFieldName("z");           //è®¾ç½®è¿‡æ»¤æ—¶æ‰€éœ€è¦ç‚¹äº‘ç±»å‹ä¸ºZå­—æ®µ
+		pass.setFilterLimits(-0.1, 10);         //è®¾ç½®åœ¨è¿‡æ»¤å­—æ®µçš„èŒƒå›´
+		pass.setFilterLimitsNegative(true);     //è®¾ç½®ä¿ç•™è¿˜æ˜¯è¿‡æ»¤æ‰å­—æ®µèŒƒå›´å†…çš„ç‚¹ï¼Œè®¾ç½®ä¸ºtrueè¡¨ç¤ºè¿‡æ»¤æ‰å­—æ®µèŒƒå›´å†…çš„ç‚¹
+		pass.filter(*m_currentCloud);		    //æ‰§è¡Œæ»¤æ³¢
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("Ö±Í¨ÂË²¨³É¹¦");
+		ui.textBrowser->append("ç›´é€šæ»¤æ³¢æˆåŠŸ");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("Ö±Í¨ÂË²¨Ê§°Ü£ºÎ´¼ÓÔØµãÔÆÎÄ¼ş");
+		ui.textBrowser->append("ç›´é€šæ»¤æ³¢å¤±è´¥ï¼šæœªåŠ è½½ç‚¹äº‘æ–‡ä»¶");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
 
-//Í³¼ÆÂË²¨;
+//ç»Ÿè®¡æ»¤æ³¢;
 void PointCloudVision::on_action_5_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼Í³¼ÆÂË²¨");
+		ui.textBrowser->append("å¼€å§‹ç»Ÿè®¡æ»¤æ³¢");
   ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		viewer->removeAllShapes();
 
-		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;   //´´½¨Í³¼ÆÂË²¨Æ÷¶ÔÏó 
-		sor.setInputCloud(m_currentCloud);         			         //ÉèÖÃÊäÈëµÄµãÔÆ
-		sor.setMeanK(50);                 					 //ÉèÖÃKNNµÄkÖµ
-		sor.setStddevMulThresh(1.0);      				     //ÉèÖÃ±ê×¼Æ«²î³ËÊıÎª1.0
-		sor.filter(*m_currentCloud);          			     //Ö´ĞĞÂË²¨
+		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;   //åˆ›å»ºç»Ÿè®¡æ»¤æ³¢å™¨å¯¹è±¡ 
+		sor.setInputCloud(m_currentCloud);         			         //è®¾ç½®è¾“å…¥çš„ç‚¹äº‘
+		sor.setMeanK(50);                 					 //è®¾ç½®KNNçš„kå€¼
+		sor.setStddevMulThresh(1.0);      				     //è®¾ç½®æ ‡å‡†åå·®ä¹˜æ•°ä¸º1.0
+		sor.filter(*m_currentCloud);          			     //æ‰§è¡Œæ»¤æ³¢
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("Í³¼ÆÂË²¨³É¹¦");
+		ui.textBrowser->append("ç»Ÿè®¡æ»¤æ³¢æˆåŠŸ");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("Í³¼ÆÂË²¨Ê§°Ü£¬Î´¼ÓÔØµãÔÆÎÄ¼ş");
+		ui.textBrowser->append("ç»Ÿè®¡æ»¤æ³¢å¤±è´¥ï¼ŒæœªåŠ è½½ç‚¹äº‘æ–‡ä»¶");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
 
-//¾ùÔÈ²ÉÑùÂË²¨;
+//å‡åŒ€é‡‡æ ·æ»¤æ³¢;
 void PointCloudVision::on_action_6_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼¾ùÔÈ²ÉÑùÂË²¨");
+		ui.textBrowser->append("å¼€å§‹å‡åŒ€é‡‡æ ·æ»¤æ³¢");
   ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
@@ -1339,22 +1403,22 @@ void PointCloudVision::on_action_6_triggered()
 		unisam.filter(*m_currentCloud);
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("¾ùÔÈ²ÉÑùÂË²¨³É¹¦");
+		ui.textBrowser->append("å‡åŒ€é‡‡æ ·æ»¤æ³¢æˆåŠŸ");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("¾ùÔÈ²ÉÑùÂË²¨Ê§°Ü£¬Î´¼ÓÔØµãÔÆÎÄ¼ş");
+		ui.textBrowser->append("å‡åŒ€é‡‡æ ·æ»¤æ³¢å¤±è´¥ï¼ŒæœªåŠ è½½ç‚¹äº‘æ–‡ä»¶");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
 
-//°ë¾¶ÂË²¨
+//åŠå¾„æ»¤æ³¢
 void PointCloudVision::on_action_7_triggered()
 {
 	if (!m_currentCloud->empty()) {
-		ui.textBrowser->append("¿ªÊ¼°ë¾¶ÂË²¨");
+		ui.textBrowser->append("å¼€å§‹åŠå¾„æ»¤æ³¢");
   ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
@@ -1363,17 +1427,17 @@ void PointCloudVision::on_action_7_triggered()
 
 		pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
 		outrem.setInputCloud(m_currentCloud);
-		outrem.setRadiusSearch(0.001);                     //ÉèÖÃ°ë¾¶Îª0.1µÄ·¶Î§ÄÚÕÒÁÙ½üµã
-		outrem.setMinNeighborsInRadius(2);               //ÉèÖÃ²éÑ¯µãµÄÁÚÓòµã¼¯ÊıĞ¡ÓÚ2µÄÉ¾³ı
-		outrem.filter(*m_currentCloud);                  //Ö´ĞĞÂË²¨
+		outrem.setRadiusSearch(0.001);                     //è®¾ç½®åŠå¾„ä¸º0.1çš„èŒƒå›´å†…æ‰¾ä¸´è¿‘ç‚¹
+		outrem.setMinNeighborsInRadius(2);               //è®¾ç½®æŸ¥è¯¢ç‚¹çš„é‚»åŸŸç‚¹é›†æ•°å°äº2çš„åˆ é™¤
+		outrem.filter(*m_currentCloud);                  //æ‰§è¡Œæ»¤æ³¢
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
-		ui.textBrowser->append("°ë¾¶ÂË²¨³É¹¦");
+		ui.textBrowser->append("åŠå¾„æ»¤æ³¢æˆåŠŸ");
   ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
-		ui.textBrowser->append("¾ùÔÈ²ÉÑùÂË²¨Ê§°Ü£¬Î´¼ÓÔØµãÔÆÎÄ¼ş");
+		ui.textBrowser->append("å‡åŒ€é‡‡æ ·æ»¤æ³¢å¤±è´¥ï¼ŒæœªåŠ è½½ç‚¹äº‘æ–‡ä»¶");
 		  ui.textBrowser->update();QApplication::processEvents();
 
 	}
@@ -1441,8 +1505,8 @@ void setCoordinate1(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer,
 	}*/
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed(new pcl::PointCloud<pcl::PointXYZ>);
 	Eigen::Vector4f cloudCentroid;
-	pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//¼ÆËãµãÔÆÖÊĞÄ
-	Eigen::Matrix4f translation = Eigen::Matrix4f::Identity();//¶¨ÒåÆ½ÒÆ¾ØÕó£¬²¢³õÊ¼»¯Îªµ¥Î»Õó
+	pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//è®¡ç®—ç‚¹äº‘è´¨å¿ƒ
+	Eigen::Matrix4f translation = Eigen::Matrix4f::Identity();//å®šä¹‰å¹³ç§»çŸ©é˜µï¼Œå¹¶åˆå§‹åŒ–ä¸ºå•ä½é˜µ
 	translation(0, 3) = -cloudCentroid[0];
 	translation(1, 3) = -cloudCentroid[1];
 	translation(2, 3) = -cloudCentroid[2];
@@ -1474,8 +1538,8 @@ void setCoordinate(boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer, 
 	}*/
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed(new pcl::PointCloud<pcl::PointXYZ>);
 	Eigen::Vector4f cloudCentroid;
-	pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//¼ÆËãµãÔÆÖÊĞÄ
-	Eigen::Matrix4f translation = Eigen::Matrix4f::Identity();//¶¨ÒåÆ½ÒÆ¾ØÕó£¬²¢³õÊ¼»¯Îªµ¥Î»Õó
+	pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//è®¡ç®—ç‚¹äº‘è´¨å¿ƒ
+	Eigen::Matrix4f translation = Eigen::Matrix4f::Identity();//å®šä¹‰å¹³ç§»çŸ©é˜µï¼Œå¹¶åˆå§‹åŒ–ä¸ºå•ä½é˜µ
 	translation(0, 3) = -point[0];
 	translation(1, 3) = -point[1];
 	translation(2, 3) = -point[2];
@@ -1504,17 +1568,17 @@ void exercise()
 	
 }
 
-/*Çóµ¥¸öµãµÄ·¨ÏòÁ¿*/
+//æ±‚å•ä¸ªç‚¹çš„æ³•å‘é‡
 Eigen::MatrixXd computeNormal_(vector<PointT> points) {
 
-	const int num = points.size();//ÁÙ½üµãµÄÊıÁ¿
+	const int num = points.size();//ä¸´è¿‘ç‚¹çš„æ•°é‡
 
-	/*ÖÊĞÄµã×ø±ê*/
+	//è´¨å¿ƒç‚¹åæ ‡
 	int x_ = 0;
 	int y_ = 0;
 	int z_ = 0;
 
-	/*¼ÆËãÖÊĞÄµã×ø±ê*/
+	//è®¡ç®—è´¨å¿ƒç‚¹åæ ‡
 	int temp = 0;
 
 	for (int i = 0; i < num; i++) {
@@ -1539,12 +1603,12 @@ Eigen::MatrixXd computeNormal_(vector<PointT> points) {
 	}
 	z_ = temp / num;
 
-	Eigen::MatrixXd errorMatrix(3, num);//×ø±êÎó²î¾ØÕó
-	Eigen::MatrixXd errorMatrix_trans(3, num);//×ø±êÎó²î¾ØÕóµÄ×ªÖÃ
-	Eigen::EigenSolver<Eigen::MatrixXd> *covarianceMatrix;//Ğ­·½²î¾ØÕó
-	Eigen::MatrixXd featureVectros;//ÌØÕ÷ÏòÁ¿
+	Eigen::MatrixXd errorMatrix(3, num);//åæ ‡è¯¯å·®çŸ©é˜µ
+	Eigen::MatrixXd errorMatrix_trans(3, num);//åæ ‡è¯¯å·®çŸ©é˜µçš„è½¬ç½®
+	Eigen::EigenSolver<Eigen::MatrixXd> *covarianceMatrix;//åæ–¹å·®çŸ©é˜µ
+	Eigen::MatrixXd featureVectros;//ç‰¹å¾å‘é‡
 
-	/*Éú³É×ø±êÎó²î¾ØÕó*/
+	//ç”Ÿæˆåæ ‡è¯¯å·®çŸ©é˜µ
 	for (int i = 0; i < 3; i++) {
 
 		for (int j = 0; j < num; j++) {
@@ -1572,13 +1636,40 @@ Eigen::MatrixXd computeNormal_(vector<PointT> points) {
 		}
 	}
 
-	/*¾ØÕó×ªÖÃ*/
+	//çŸ©é˜µè½¬ç½®
 	errorMatrix_trans = errorMatrix.transpose();
-	/*Éú³ÉĞ­·½²î¾ØÕó*/
+
+	//ç”Ÿæˆåæ–¹å·®çŸ©é˜µ
 	covarianceMatrix = new  Eigen::EigenSolver<Eigen::MatrixXd>(errorMatrix * errorMatrix_trans);
 
-	/*Çó³ö·¨ÏòÁ¿*/
+	//æ±‚å‡ºæ³•å‘é‡
 	featureVectros = covarianceMatrix->eigenvectors().real();
 
 	return featureVectros;
+}
+
+void PointCloudVision::computeNormals() {
+
+	//------------------è®¡ç®—æ³•çº¿----------------------
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> n;//OMPåŠ é€Ÿ
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+	//å»ºç«‹kdtreeæ¥è¿›è¡Œè¿‘é‚»ç‚¹é›†æœç´¢
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+	n.setNumberOfThreads(10);//è®¾ç½®openMPçš„çº¿ç¨‹æ•°
+							 //n.setViewPoint(0,0,0);//è®¾ç½®è§†ç‚¹ï¼Œé»˜è®¤ä¸ºï¼ˆ0ï¼Œ0ï¼Œ0ï¼‰
+	n.setInputCloud(m_currentCloud);
+	n.setSearchMethod(tree);
+	n.setKSearch(10);//ç‚¹äº‘æ³•å‘è®¡ç®—æ—¶ï¼Œéœ€è¦æ‰€æœçš„è¿‘é‚»ç‚¹å¤§å°
+					 //n.setRadiusSearch(0.03);//åŠå¾„æœç´ 
+	n.compute(*normals);//å¼€å§‹è¿›è¡Œæ³•å‘è®¡
+
+						//----------------å¯è§†åŒ–--------------
+						//æ·»åŠ éœ€è¦æ˜¾ç¤ºçš„ç‚¹äº‘æ³•å‘ã€‚cloudä¸ºåŸå§‹ç‚¹äº‘æ¨¡å‹ï¼Œnormalä¸ºæ³•å‘ä¿¡æ¯ï¼Œ20è¡¨ç¤ºéœ€è¦æ˜¾ç¤ºæ³•å‘çš„ç‚¹äº‘é—´éš”ï¼Œå³æ¯20ä¸ªç‚¹æ˜¾ç¤ºä¸€æ¬¡æ³•å‘ï¼Œ0.02è¡¨ç¤ºæ³•å‘é•¿åº¦ã€‚
+	viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal>(m_currentCloud, normals, 20, 1, "normals");
+	//è®¾ç½®ç‚¹äº‘å¤§å°
+	viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "sample cloud");
+	while (!viewer->wasStopped())
+	{
+		viewer->spinOnce(100);
+	}
 }
