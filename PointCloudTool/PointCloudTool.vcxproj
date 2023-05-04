@@ -111,9 +111,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="octree_search_my.h" />
+    <ClInclude Include="otctree_search_zz.h">
+      <DeploymentContent>true</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="PCA_ICP.h" />
     <QtMoc Include="QOctreeDialog.h" />
     <ClInclude Include="scale_ICP_v2.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

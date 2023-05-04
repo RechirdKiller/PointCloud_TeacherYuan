@@ -24,6 +24,9 @@ private slots:
 	//°ë¾¶ÁÚÓòËÑË÷
 	void on_btn_rSearch_clicked();
 
+	//ÌåËØËÑË÷1
+	void on_btn_sSearch_clicked();
+
 
 signals:
 	void octree_vsearch(double resolution, double x, double y, double z, int r, int g, int b);

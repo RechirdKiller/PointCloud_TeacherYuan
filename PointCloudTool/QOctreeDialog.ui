@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>389</width>
-    <height>243</height>
+    <width>750</width>
+    <height>394</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,7 +29,7 @@
         <double>99999.990000000005239</double>
        </property>
        <property name="value">
-        <double>128.000000000000000</double>
+        <double>2.000000000000000</double>
        </property>
       </widget>
      </item>
@@ -86,6 +86,22 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="btn_sSearch">
+       <property name="text">
+        <string>体素搜索1</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QPushButton" name="btn_vSearch">
        <property name="text">
@@ -94,16 +110,16 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="btn_kSearch">
+      <widget class="QPushButton" name="btn_rSearch">
        <property name="text">
-        <string>k邻域搜索</string>
+        <string>半径邻域搜索</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="btn_rSearch">
+      <widget class="QPushButton" name="btn_kSearch">
        <property name="text">
-        <string>半径邻域搜索</string>
+        <string>k邻域搜索</string>
        </property>
       </widget>
      </item>

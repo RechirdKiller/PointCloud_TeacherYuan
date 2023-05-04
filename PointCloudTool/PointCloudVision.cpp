@@ -118,11 +118,11 @@ void PointCloudVision::init()
 	//添加坐标轴
 	//vtkSmartPointer<vtkRenderWindow> renderer = vtkSmartPointer<vtkRenderWindow>::New();
 
-	vtkSmartPointer<vtkRenderer> rendererVic = vtkSmartPointer<vtkRenderer>::New();
+	vtkSmartPointer<vtkRenderer> rendererVic;
 	vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
 	axes->SetAxisLabels(1);
 	axes->SetVisibility(true);
-	rendererVic->AddActor(axes);
+	//rendererVic->AddActor(axes);
 	//viewer->getRenderWindow()->AddRenderer(rendererVic);
 	//viewer->getRenderWindow()->GetRenderers()->GetFirstRenderer()->AddActor2D(axes);
 	//设置VTK可视化窗口指针
@@ -134,8 +134,8 @@ void PointCloudVision::init()
 	viewer->setBackgroundColor((double)113/255, (double)110/255, (double)119/255);
 	viewer->addOrientationMarkerWidgetAxes(viewer->getRenderWindow()->GetInteractor());
 	
-	//添加坐标轴
-	//viewer->addCoordinateSystem(1, 0);
+	//添加坐标轴                                
+	viewer->addCoordinateSystem(0.125, 0);
 	
 	//槽函数
 	//高度渲染

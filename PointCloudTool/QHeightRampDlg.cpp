@@ -1,5 +1,6 @@
 #include "QHeightRampDlg.h"
 
+
 QHeightRampDlg::QHeightRampDlg(QWidget *parent)
 	: QDialog(parent)
 {
