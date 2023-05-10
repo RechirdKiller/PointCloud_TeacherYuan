@@ -36,10 +36,6 @@
 //绘制箭头VTK库
 #include <pcl/visualization/pcl_visualizer.h>
 
-//计算法向量PCL库
-#include <pcl/features/normal_3d_omp.h>
-#include <boost/thread/thread.hpp>
-
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
 VTK_MODULE_INIT(vtkRenderingFreeType);
@@ -1644,21 +1640,23 @@ void exercise()
 }
 
 //求单个点的法向量
-vector<double> computeNormal_(vector<PointT> points) {
+vector<float> computeNormal_(vector<PointT> points) {
 
 	const int num = points.size();//临近点的数量
-	double errorMatrix[9] = {0,0,0,0,0,0,0,0,0};//坐标误差矩阵
-	double eigenValue[3];//特征值矩阵
-	double featureVector[9];//特征向量矩阵
-
+	Eigen::MatrixXd errorMatrix(3,3);
+	Eigen::EigenSolver<Eigen::MatrixXd> es(errorMatrix);
+	Eigen::MatrixXd evalsReal;//记录下特征值的实数部分
+	Eigen::MatrixXd eigenVector;//记录下特征向量
+	Eigen::MatrixXf::Index valuesMin;//记录下最小特征值的索引
+	vector<float> res;
 	//质心点坐标
-	double x_ = 0;
-	double y_ = 0;
-	double z_ = 0;
+	float x_ = 0;
+	float y_ = 0;
+	float z_ = 0;
 
 
 	//计算质心点坐标
-	double temp = 0;
+	float temp = 0;
 
 	for (int i = 0; i < num; i++) {
 
@@ -1682,166 +1680,40 @@ vector<double> computeNormal_(vector<PointT> points) {
 	}
 	z_ = temp / num;
 
+
+	errorMatrix(0, 0) = 0;
+	errorMatrix(0, 1) = 0;
+	errorMatrix(0, 2) = 0;
+	errorMatrix(1, 0) = 0;
+	errorMatrix(1, 1) = 0;
+	errorMatrix(1, 2) = 0;
+	errorMatrix(2, 0) = 0;
+	errorMatrix(2, 1) = 0;
+	errorMatrix(2, 2) = 0;
+
 	//生成坐标误差矩阵
 	for (int j = 0; j < num;j++) {
 
-		errorMatrix[0] += (points[j].x - x_) * (points[j].x - x_);
-		errorMatrix[1] += (points[j].x - x_) * (points[j].y - y_);
-		errorMatrix[2] += (points[j].x - x_) * (points[j].z - z_);
-		errorMatrix[3] += (points[j].x - x_) * (points[j].y - y_);
-		errorMatrix[4] += (points[j].y - y_) * (points[j].y - y_);
-		errorMatrix[5] += (points[j].z - z_) * (points[j].y - y_);
-		errorMatrix[6] += (points[j].x - x_) * (points[j].z - z_);
-		errorMatrix[7] += (points[j].y - y_) * (points[j].z - z_);
-		errorMatrix[8] += (points[j].z - z_) * (points[j].z - x_);
+		errorMatrix(0,0) += (points[j].x - x_) * (points[j].x - x_);
+		errorMatrix(0,1) += (points[j].x - x_) * (points[j].y - y_);
+		errorMatrix(0,2) += (points[j].x - x_) * (points[j].z - z_);
+		errorMatrix(1,0) += (points[j].x - x_) * (points[j].y - y_);
+		errorMatrix(1,1) += (points[j].y - y_) * (points[j].y - y_);
+		errorMatrix(1,2) += (points[j].z - z_) * (points[j].y - y_);
+		errorMatrix(2,0) += (points[j].x - x_) * (points[j].z - z_);
+		errorMatrix(2,1) += (points[j].y - y_) * (points[j].z - z_);
+		errorMatrix(2,2) += (points[j].z - z_) * (points[j].z - x_);
 	}
 
-	for (int i = 0; i < 9; i++) {
-
-		eigenValue[i] = DBL_MAX;
-		featureVector[i] = DBL_MAX;
-	}
-
-	bool re = computeFeature(errorMatrix, 3, featureVector, eigenValue);
-
-	vector<double> res;
-	res.push_back(featureVector[6]);
-	res.push_back(featureVector[7]);
-	res.push_back(featureVector[8]);
-
+	int index;//记录下最小特征值对应的索引值
+	evalsReal = es.eigenvalues().real();
+	evalsReal.rowwise().sum().minCoeff(&valuesMin);
+	
+	eigenVector = es.eigenvectors();
+	res.push_back(eigenVector.real()(0, valuesMin));
+	res.push_back(eigenVector.real()(1, valuesMin));
+	res.push_back(eigenVector.real()(2, valuesMin));
 	return res;
-}
-
-//计算矩阵特征向量和特征值
-
-bool computeFeature(double * matrix, int size, double *featureVector, double *eigenValue, double dbEps, int nJt){
-	int dim = size;
-	vector<double> mat;
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	mat.push_back(0.0);
-	// 初始化特征矩阵
-	for (int i = 0; i < dim; i++)
-	{
-		for (int j = 0; j < dim; j++)
-		{
-			mat[i*size+j] = matrix[i*size+j];
-			if (i == j)
-			{
-				featureVector[i*size+j] = 1.0;
-			}
-			else
-			{
-				featureVector[i*size+j] = 0.0;
-			}
-		}
-	}
-	int nCount = 0;  //current iteration
-	while (1)
-	{
-		// 搜索矩阵绝对值最大元素及下标
-		double dbMax = mat[0*size+1];
-		int nRow = 0;
-		int nCol = 1;
-		for (int i = 0; i < dim; i++) //row
-		{
-			for (int j = 0; j < dim; j++)
-			{
-				double d = fabs(mat[i*size+j]);
-				if ((i != j) && (d > dbMax))
-				{
-					dbMax = d;
-					nRow = i;
-					nCol = j;
-				}
-			}
-		}
-		cout << dbMax << "," << nRow << "," << nCol << endl;
-		// 阈值条件判断
-		if (dbMax < dbEps)     //precision check
-			break;
-		if (nCount > nJt)       //iterations check
-			break;
-		nCount++;
-		double dbApp = mat[nRow*size+nRow];
-		double dbApq = mat[nRow*size+nCol];
-		double dbAqq = mat[nCol*size+nCol];
-		// 计算旋转矩阵
-		double dbAngle = 0.5*atan2(-2 * dbApq, dbAqq - dbApp);
-		double dbSinTheta = sin(dbAngle);
-		double dbCosTheta = cos(dbAngle);
-		double dbSin2Theta = sin(2 * dbAngle);
-		double dbCos2Theta = cos(2 * dbAngle);
-		mat[nRow*size+nRow] = dbApp*dbCosTheta*dbCosTheta + dbAqq*dbSinTheta*dbSinTheta + 2 * dbApq*dbCosTheta*dbSinTheta;
-		mat[nCol*size+nCol] = dbApp*dbSinTheta*dbSinTheta + dbAqq*dbCosTheta*dbCosTheta - 2 * dbApq*dbCosTheta*dbSinTheta;
-		mat[nRow*size+nCol] = 0.5*(dbAqq - dbApp)*dbSin2Theta + dbApq*dbCos2Theta;
-		mat[nCol*size+nRow] = mat[nRow*size+nCol];
-		for (int i = 0; i < dim; i++)
-		{
-			if ((i != nCol) && (i != nRow))
-			{
-				dbMax = mat[i*size+nRow];
-				mat[i*size+nRow] = mat[i*size+nCol] * dbSinTheta + dbMax*dbCosTheta;
-				mat[i*size+nCol] = mat[i*size+nCol] * dbCosTheta - dbMax*dbSinTheta;
-			}
-		}
-		for (int j = 0; j < dim; j++) {
-			if ((j != nCol) && (j != nRow)) {	
-				dbMax = mat[nRow*size+j];
-				mat[nRow*size+j] = mat[nCol*size+j] * dbSinTheta + dbMax*dbCosTheta;
-				mat[nCol*size+j] = mat[nCol*size+j] * dbCosTheta - dbMax*dbSinTheta;
-			}
-		}
-		//compute eigenvector
-		for (int i = 0; i < dim; i++)
-		{
-			dbMax = featureVector[i*size+nRow];
-			featureVector[i*size+nRow] = featureVector[i*size+nCol] * dbSinTheta + dbMax*dbCosTheta;
-			featureVector[i*size+nCol] = featureVector[i*size+nCol] * dbCosTheta - dbMax*dbSinTheta;
-		}
-	}
-	// 特征值排序
-	std::map<double, int> mapEigen;
-	for (int i = 0; i < dim; i++)
-	{
-		eigenValue[i] = mat[i*size+i];
-		mapEigen.insert(make_pair(eigenValue[i], i));
-	}
-	double *pdbTmpVec = new double[dim*dim];
-	std::map<double, int>::reverse_iterator iter = mapEigen.rbegin();
-	for (int j = 0; iter != mapEigen.rend(), j < dim; ++iter, ++j) {
-		for (int i = 0; i < dim; i++) {
-			pdbTmpVec[i*dim + j] = featureVector[i*size+iter->second];
-		}
-		eigenValue[j] = iter->first;
-	}
-	for (int i = 0; i < dim; i++)
-	{
-		double dSumVec = 0;
-		for (int j = 0; j < dim; j++)
-			dSumVec += pdbTmpVec[j * dim + i];
-		if (dSumVec < 0)
-		{
-			for (int j = 0; j < dim; j++)
-				pdbTmpVec[j * dim + i] *= -1;
-		}
-	}
-	for (int i = 0; i < dim; i++)
-	{
-		for (int j = 0; j < dim; j++)
-		{
-			featureVector[i*size+j] = pdbTmpVec[i * dim + j];
-		}
-	}
-	delete[]pdbTmpVec;
-	mat.clear();
-	return true;
 }
 
 void PointCloudVision::drawArrow(PointT start, PointT end, string id, vector<int> RGB ) {
