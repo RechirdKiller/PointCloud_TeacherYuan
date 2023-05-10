@@ -31,17 +31,19 @@
 #include"octree_search_my.h"
 #include <vtkRenderWindow.h>
 #include <vtkAutoInit.h>
+#include <string>
+
+//绘制箭头VTK库
+#include <pcl/visualization/pcl_visualizer.h>
 
 //计算法向量PCL库
 #include <pcl/features/normal_3d_omp.h>
 #include <boost/thread/thread.hpp>
 
-#include <Eigen/Core>
-
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
 VTK_MODULE_INIT(vtkRenderingFreeType);
-VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
+VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2 );
 
 //#include <Eigen/Core>
 
@@ -118,11 +120,11 @@ void PointCloudVision::init()
 	//添加坐标轴
 	//vtkSmartPointer<vtkRenderWindow> renderer = vtkSmartPointer<vtkRenderWindow>::New();
 
-	vtkSmartPointer<vtkRenderer> rendererVic = vtkSmartPointer<vtkRenderer>::New();
+	vtkSmartPointer<vtkRenderer> rendererVic;
 	vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
 	axes->SetAxisLabels(1);
 	axes->SetVisibility(true);
-	rendererVic->AddActor(axes);
+	//rendererVic->AddActor(axes);
 	//viewer->getRenderWindow()->AddRenderer(rendererVic);
 	//viewer->getRenderWindow()->GetRenderers()->GetFirstRenderer()->AddActor2D(axes);
 	//设置VTK可视化窗口指针
@@ -134,8 +136,8 @@ void PointCloudVision::init()
 	viewer->setBackgroundColor((double)113/255, (double)110/255, (double)119/255);
 	viewer->addOrientationMarkerWidgetAxes(viewer->getRenderWindow()->GetInteractor());
 	
-	//添加坐标轴
-	//viewer->addCoordinateSystem(1, 0);
+	//添加坐标轴                                
+	viewer->addCoordinateSystem(0.125, 0);
 	
 	//槽函数
 	//高度渲染
@@ -385,10 +387,83 @@ void PointCloudVision::on_action_preserve_triggered()
 		}
 }
 
+
+//计算矩阵特征向量和特征值
+bool computeFeature(double * matrix, int size, double *featureVector, double *eigenValue, double dbEps=0.01, int nJt=300);
+//求单个点的法向量
+vector<double> computeNormal_(vector<PointT> points);
+
 //点云法向量
 void PointCloudVision::on_action_cloud_normal_vector_2_triggered()
 {
-	outputInDebug("****");
+	if (m_currentCloud->empty()) {
+
+		ui.textBrowser->append("计算失败，未打开点云");
+		return;
+	}
+	ui.textBrowser->append("开始计算法向量");
+	/*//------------------计算法线----------------------
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> *n = new pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal>();//OMP加速
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+	//建立kdtree来进行近邻点集搜索ji
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+	n->setNumberOfThreads(10);//设置openMP的线程数
+							 //n.setViewPoint(0,0,0);//设置视点，默认为（0，0，0）
+	n->setInputCloud(m_currentCloud);
+	n->setSearchMethod(tree);
+	n->setKSearch(10);//点云法向计算时，需要所搜的近邻点大小
+					 //n.setRadiusSearch(0.03);//半径搜素
+	n->compute(*normals);//开始进行法向计
+
+
+	//添加需要显示的点云法向。cloud为原始点云模型，normal为法向信息，20表示需要显示法向的点云间隔，即每20个点显示一次法向，0.02表示法向长度。
+	viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal>(m_currentCloud, normals, 20, 0.02, "normals");
+	ui.textBrowser->append("结束计算法向量");*/
+
+	PointT start;//法向量起始点
+	PointT *end = new PointT();//法向量终点
+	vector<PointT> proximityPoints;//临近点集合
+	vector<double> vectorP;//法向量坐标
+	float size;//法向量长度
+	for (int i = 0; i < m_currentCloud->points.size(); i++) {
+		
+		ui.textBrowser->append("开始寻找点" + i);
+		start = m_currentCloud->points[i];
+		proximityPoints = {start};//临近点算法
+		
+		//计算法向量
+		vectorP = computeNormal_(proximityPoints);
+
+		//法向量单位化
+		int sum = vectorP[0] + vectorP[1] + vectorP[2];
+		vectorP[0] = vectorP[0] / sum;
+		vectorP[1] = vectorP[1] / sum;
+		vectorP[2] = vectorP[2] / sum;
+		delete &sum;
+
+		//计算点云尺寸并确定向量长度
+		PointT max, min;
+		pcl::getMinMax3D(*m_currentCloud, min, max);
+		size = sqrt(max.x*max.x + max.y*max.y + max.z*max.z) / 5;
+
+		//判断方向并确定法向量终点
+		if ((start.x * (float)vectorP[0] + start.y * (float)vectorP[1] + start.z * (float)vectorP[2] < 0))
+		{
+			end->x = start.x - (float)vectorP[0] * size;
+			end->y = start.y - (float)vectorP[1] * size;
+			end->z = start.z - (float)vectorP[2] * size;
+		}
+		else
+		{
+			end->x = start.x + vectorP[0];
+			end->y = start.y + vectorP[1];
+			end->z = start.z + vectorP[2];
+		}
+
+		//可视化
+		string s = "arrow" + i;
+		drawArrow(start, *end, s);
+	}
 	return;
 }
 
@@ -1569,17 +1644,21 @@ void exercise()
 }
 
 //求单个点的法向量
-Eigen::MatrixXd computeNormal_(vector<PointT> points) {
+vector<double> computeNormal_(vector<PointT> points) {
 
 	const int num = points.size();//临近点的数量
+	double errorMatrix[9] = {0,0,0,0,0,0,0,0,0};//坐标误差矩阵
+	double eigenValue[3];//特征值矩阵
+	double featureVector[9];//特征向量矩阵
 
 	//质心点坐标
-	int x_ = 0;
-	int y_ = 0;
-	int z_ = 0;
+	double x_ = 0;
+	double y_ = 0;
+	double z_ = 0;
+
 
 	//计算质心点坐标
-	int temp = 0;
+	double temp = 0;
 
 	for (int i = 0; i < num; i++) {
 
@@ -1603,73 +1682,197 @@ Eigen::MatrixXd computeNormal_(vector<PointT> points) {
 	}
 	z_ = temp / num;
 
-	Eigen::MatrixXd errorMatrix(3, num);//坐标误差矩阵
-	Eigen::MatrixXd errorMatrix_trans(3, num);//坐标误差矩阵的转置
-	Eigen::EigenSolver<Eigen::MatrixXd> *covarianceMatrix;//协方差矩阵
-	Eigen::MatrixXd featureVectros;//特征向量
-
 	//生成坐标误差矩阵
-	for (int i = 0; i < 3; i++) {
+	for (int j = 0; j < num;j++) {
 
-		for (int j = 0; j < num; j++) {
+		errorMatrix[0] += (points[j].x - x_) * (points[j].x - x_);
+		errorMatrix[1] += (points[j].x - x_) * (points[j].y - y_);
+		errorMatrix[2] += (points[j].x - x_) * (points[j].z - z_);
+		errorMatrix[3] += (points[j].x - x_) * (points[j].y - y_);
+		errorMatrix[4] += (points[j].y - y_) * (points[j].y - y_);
+		errorMatrix[5] += (points[j].z - z_) * (points[j].y - y_);
+		errorMatrix[6] += (points[j].x - x_) * (points[j].z - z_);
+		errorMatrix[7] += (points[j].y - y_) * (points[j].z - z_);
+		errorMatrix[8] += (points[j].z - z_) * (points[j].z - x_);
+	}
 
-			switch (i) {
+	for (int i = 0; i < 9; i++) {
 
-			case 0:
+		eigenValue[i] = DBL_MAX;
+		featureVector[i] = DBL_MAX;
+	}
 
-				errorMatrix(i,j) = points[j].x;
-				break;
+	bool re = computeFeature(errorMatrix, 3, featureVector, eigenValue);
 
-			case 1:
+	vector<double> res;
+	res.push_back(featureVector[6]);
+	res.push_back(featureVector[7]);
+	res.push_back(featureVector[8]);
 
-				errorMatrix(i, j) = points[j].y;
-				break;
+	return res;
+}
 
-			case 2:
+//计算矩阵特征向量和特征值
 
-				errorMatrix(i, j) = points[j].z;
-				break;
-
-			default:
-				break;
+bool computeFeature(double * matrix, int size, double *featureVector, double *eigenValue, double dbEps, int nJt){
+	int dim = size;
+	vector<double> mat;
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	mat.push_back(0.0);
+	// 初始化特征矩阵
+	for (int i = 0; i < dim; i++)
+	{
+		for (int j = 0; j < dim; j++)
+		{
+			mat[i*size+j] = matrix[i*size+j];
+			if (i == j)
+			{
+				featureVector[i*size+j] = 1.0;
+			}
+			else
+			{
+				featureVector[i*size+j] = 0.0;
 			}
 		}
 	}
-
-	//矩阵转置
-	errorMatrix_trans = errorMatrix.transpose();
-
-	//生成协方差矩阵
-	covarianceMatrix = new  Eigen::EigenSolver<Eigen::MatrixXd>(errorMatrix * errorMatrix_trans);
-
-	//求出法向量
-	featureVectros = covarianceMatrix->eigenvectors().real();
-
-	return featureVectros;
+	int nCount = 0;  //current iteration
+	while (1)
+	{
+		// 搜索矩阵绝对值最大元素及下标
+		double dbMax = mat[0*size+1];
+		int nRow = 0;
+		int nCol = 1;
+		for (int i = 0; i < dim; i++) //row
+		{
+			for (int j = 0; j < dim; j++)
+			{
+				double d = fabs(mat[i*size+j]);
+				if ((i != j) && (d > dbMax))
+				{
+					dbMax = d;
+					nRow = i;
+					nCol = j;
+				}
+			}
+		}
+		cout << dbMax << "," << nRow << "," << nCol << endl;
+		// 阈值条件判断
+		if (dbMax < dbEps)     //precision check
+			break;
+		if (nCount > nJt)       //iterations check
+			break;
+		nCount++;
+		double dbApp = mat[nRow*size+nRow];
+		double dbApq = mat[nRow*size+nCol];
+		double dbAqq = mat[nCol*size+nCol];
+		// 计算旋转矩阵
+		double dbAngle = 0.5*atan2(-2 * dbApq, dbAqq - dbApp);
+		double dbSinTheta = sin(dbAngle);
+		double dbCosTheta = cos(dbAngle);
+		double dbSin2Theta = sin(2 * dbAngle);
+		double dbCos2Theta = cos(2 * dbAngle);
+		mat[nRow*size+nRow] = dbApp*dbCosTheta*dbCosTheta + dbAqq*dbSinTheta*dbSinTheta + 2 * dbApq*dbCosTheta*dbSinTheta;
+		mat[nCol*size+nCol] = dbApp*dbSinTheta*dbSinTheta + dbAqq*dbCosTheta*dbCosTheta - 2 * dbApq*dbCosTheta*dbSinTheta;
+		mat[nRow*size+nCol] = 0.5*(dbAqq - dbApp)*dbSin2Theta + dbApq*dbCos2Theta;
+		mat[nCol*size+nRow] = mat[nRow*size+nCol];
+		for (int i = 0; i < dim; i++)
+		{
+			if ((i != nCol) && (i != nRow))
+			{
+				dbMax = mat[i*size+nRow];
+				mat[i*size+nRow] = mat[i*size+nCol] * dbSinTheta + dbMax*dbCosTheta;
+				mat[i*size+nCol] = mat[i*size+nCol] * dbCosTheta - dbMax*dbSinTheta;
+			}
+		}
+		for (int j = 0; j < dim; j++) {
+			if ((j != nCol) && (j != nRow)) {	
+				dbMax = mat[nRow*size+j];
+				mat[nRow*size+j] = mat[nCol*size+j] * dbSinTheta + dbMax*dbCosTheta;
+				mat[nCol*size+j] = mat[nCol*size+j] * dbCosTheta - dbMax*dbSinTheta;
+			}
+		}
+		//compute eigenvector
+		for (int i = 0; i < dim; i++)
+		{
+			dbMax = featureVector[i*size+nRow];
+			featureVector[i*size+nRow] = featureVector[i*size+nCol] * dbSinTheta + dbMax*dbCosTheta;
+			featureVector[i*size+nCol] = featureVector[i*size+nCol] * dbCosTheta - dbMax*dbSinTheta;
+		}
+	}
+	// 特征值排序
+	std::map<double, int> mapEigen;
+	for (int i = 0; i < dim; i++)
+	{
+		eigenValue[i] = mat[i*size+i];
+		mapEigen.insert(make_pair(eigenValue[i], i));
+	}
+	double *pdbTmpVec = new double[dim*dim];
+	std::map<double, int>::reverse_iterator iter = mapEigen.rbegin();
+	for (int j = 0; iter != mapEigen.rend(), j < dim; ++iter, ++j) {
+		for (int i = 0; i < dim; i++) {
+			pdbTmpVec[i*dim + j] = featureVector[i*size+iter->second];
+		}
+		eigenValue[j] = iter->first;
+	}
+	for (int i = 0; i < dim; i++)
+	{
+		double dSumVec = 0;
+		for (int j = 0; j < dim; j++)
+			dSumVec += pdbTmpVec[j * dim + i];
+		if (dSumVec < 0)
+		{
+			for (int j = 0; j < dim; j++)
+				pdbTmpVec[j * dim + i] *= -1;
+		}
+	}
+	for (int i = 0; i < dim; i++)
+	{
+		for (int j = 0; j < dim; j++)
+		{
+			featureVector[i*size+j] = pdbTmpVec[i * dim + j];
+		}
+	}
+	delete[]pdbTmpVec;
+	mat.clear();
+	return true;
 }
 
-void PointCloudVision::computeNormals() {
+void PointCloudVision::drawArrow(PointT start, PointT end, string id, vector<int> RGB ) {
 
-	//------------------计算法线----------------------
-	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> n;//OMP加速
-	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-	//建立kdtree来进行近邻点集搜索
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-	n.setNumberOfThreads(10);//设置openMP的线程数
-							 //n.setViewPoint(0,0,0);//设置视点，默认为（0，0，0）
-	n.setInputCloud(m_currentCloud);
-	n.setSearchMethod(tree);
-	n.setKSearch(10);//点云法向计算时，需要所搜的近邻点大小
-					 //n.setRadiusSearch(0.03);//半径搜素
-	n.compute(*normals);//开始进行法向计
+	//判断当前的箭头ID是否存在
+	bool temp = true;
+	for (int i = 0; i < normalID.size(); i++) {
 
-						//----------------可视化--------------
-						//添加需要显示的点云法向。cloud为原始点云模型，normal为法向信息，20表示需要显示法向的点云间隔，即每20个点显示一次法向，0.02表示法向长度。
-	viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal>(m_currentCloud, normals, 20, 1, "normals");
-	//设置点云大小
-	viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "sample cloud");
-	while (!viewer->wasStopped())
-	{
-		viewer->spinOnce(100);
+		if (id.compare(normalID[i]) == 0) {
+
+			temp = false;
+		}
 	}
+	if (temp) normalID.push_back(id);
+	delete &temp;
+
+	vector<float> vec = { end.x - start.x, end.y - start.y, end.z - start.z };
+	PointT *l = new PointT();
+	PointT *r = new PointT();
+
+	l->x = start.x + vec[0] * 4 / 3;
+	l->y = start.y + vec[0] * 2 / 3;
+	l->z = start.z + vec[0] * 2 / 3;
+
+	r->x = start.x ;
+	r->y = start.y + vec[0] * 2 / 3;
+	r->z = start.z + vec[0] * 2 / 3;
+
+
+	viewer->addLine<PointT>(start, end);
+	viewer->addLine<PointT>(end, *l);
+	viewer->addLine<PointT>(end, *r);
+	return;
 }

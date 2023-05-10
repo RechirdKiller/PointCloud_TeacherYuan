@@ -2,7 +2,7 @@
 #include <QtWidgets/QMainWindow>
 
 #include "ui_PointCloudVision.h"
-
+#include <vector>
 #include <pcl/point_types.h>					//点云数据类型
 #include <pcl/point_cloud.h>					//点云类
 #include <pcl/visualization/pcl_visualizer.h>	//点云可视化类
@@ -30,6 +30,7 @@
 
 #include <string>
 
+using namespace std;
 
 //设置中文编码
 #pragma execution_character_set("utf-8")
@@ -201,9 +202,12 @@ public slots:
 	//八叉树k近邻搜索;
 	//void ksearch(float resolution, double x, double y, double z, int k);
 
-	//计算法向量——PCL
-	void computeNormals();
+	//画箭头
+	void drawArrow(PointT start, PointT end, string id, vector<int> RGB = { 255,0,0 });
 
 private:
 	Ui::PointCloudVisionClass ui;
+	
+	//存储所有箭头的ID
+	vector<string> normalID;
 };
