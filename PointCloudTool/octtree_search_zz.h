@@ -1690,7 +1690,7 @@ namespace octree_my
 			{
 				string name = to_string(root->getX_min()) + " " + to_string(root->getX_Max()) + " " + to_string(root->getY_min()) + " " + to_string(root->getY_Max()) + " " + to_string(root->getZ_min()) + " " + to_string(root->getZ_Max());
 				//cout << name;
-
+				
 				viewer->addCube(root->getX_min(), root->getX_Max(), root->getY_min(), root->getY_Max(), root->getZ_min(), root->getZ_Max(), 1.0, 1.0, 0.0, name);
 				viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_REPRESENTATION, pcl::visualization::PCL_VISUALIZER_REPRESENTATION_WIREFRAME, name);
 			}

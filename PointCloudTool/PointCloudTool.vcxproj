@@ -56,13 +56,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <IncludePath>D:\Eigen\eigen-3.3.9;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\Eigen\eigen-3.3.9;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Eigen\eigen-3.3.9;.\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
@@ -96,12 +96,14 @@
     <ClCompile Include="PointCloudVision.cpp" />
     <ClCompile Include="QHeightRampDlg.cpp" />
     <ClCompile Include="QOctreeDialog.cpp" />
+    <ClCompile Include="QOctrTree_my.cpp" />
     <ClCompile Include="scale_ICP_v2.cpp" />
     <QtRcc Include="PointCloudVision.qrc" />
     <ClCompile Include="main.cpp" />
     <QtUic Include="PointCloudVision.ui" />
     <QtUic Include="QHeightRampDlg.ui" />
     <QtUic Include="QOctreeDialog.ui" />
+    <QtUic Include="QOctrTree_my.ui" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="PointCloudVision.h" />
@@ -110,12 +112,12 @@
     <QtMoc Include="QHeightRampDlg.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="octree_search_my.h" />
-    <ClInclude Include="otctree_search_zz.h">
+    <ClInclude Include="octtree_search_zz.h">
       <DeploymentContent>true</DeploymentContent>
     </ClInclude>
     <ClInclude Include="PCA_ICP.h" />
     <QtMoc Include="QOctreeDialog.h" />
+    <QtMoc Include="QOctrTree_my.h" />
     <ClInclude Include="scale_ICP_v2.h" />
   </ItemGroup>
   <ItemGroup>

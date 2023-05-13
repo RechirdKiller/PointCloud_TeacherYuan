@@ -28,26 +28,18 @@
 #include <QGuiApplication>
 #include <QtWidgets/QApplication>
 #include <iostream>
-#include"octree_search_my.h"
+#include"octtree_search_zz.h"
 #include <vtkRenderWindow.h>
 #include <vtkAutoInit.h>
 
-//计算法向量PCL库
-#include <pcl/features/normal_3d_omp.h>
-#include <boost/thread/thread.hpp>
-
-#include <Eigen/Core>
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
 VTK_MODULE_INIT(vtkRenderingFreeType);
 VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
 
-//#include <Eigen/Core>
-
 using namespace std;
 #pragma execution_character_set("utf-8")
-
 QString Last_FileName=nullptr;
 double dist_scale = 1;
 
@@ -68,6 +60,15 @@ PointCloudVision::PointCloudVision(QWidget *parent)
 	//dist_scale = 1;
 
 }
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr creatSearchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector<int>pointIndex);
+void visualization(pcl::visualization::PCLVisualizer::Ptr viewer,octree_my::octree tree, pcl::PointXYZ searchPoint, std::vector<int> pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+pcl::PointCloud<pcl::PointXYZ>::Ptr creatSearchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector<int>pointIndex);
+void vsearch(pcl::visualization::PCLVisualizer::Ptr viewer,Ui::PointCloudVisionClass ui,octree_my::octree tree, pcl::PointXYZ searchPoint, std::vector<int> pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+octree_my::octree createMyOctree(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int max_point_size);
+octree_my::octree createMyOctreeByDepth(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int depth);
+void ksearch(Ui::PointCloudVisionClass ui, pcl::visualization::PCLVisualizer::Ptr viewer, octree_my::octree tree, pcl::PointXYZ searchPoint, int count, vector<int>pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+void rsearch(Ui::PointCloudVisionClass ui, pcl::visualization::PCLVisualizer::Ptr viewer, octree_my::octree tree, pcl::PointXYZ searchPoint, float radius, int count, vector<int>pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
 //获取两个点平行于坐标轴的最短距离
 double getMinValue(PointT p1, PointT p2);
@@ -143,7 +144,9 @@ void PointCloudVision::init()
 	//八叉树体素近邻搜索
 	connect(&octreeDialog, SIGNAL(octree_vsearch(double, double, double, double, int, int, int)), this, SLOT(octree_vsearch(double, double, double, double, int, int, int)));
 	//octree
-
+	connect(&octreeDialog, SIGNAL(octree_vsearch_zz(double, double, double, double, int, int, int,int)), this, SLOT(octree_vsearch_zz(double, double, double, double, int, int, int,int)));
+	//层数创建八叉树
+	connect(&myOctreeDialog1, SIGNAL(searchPointByOctreeCreatedByDepth(int, int, double, int, double, double, double)), this, SLOT(searchPointByOctreeCreatedByDepth(int, int, double, int, double, double, double)));
 	//设置滤波工具栏;
 	toolButton = new QToolButton(this);
 	//只显示图片;
@@ -385,13 +388,85 @@ void PointCloudVision::on_action_preserve_triggered()
 		}
 }
 
+//计算矩阵特征向量和特征值
+bool computeFeature(double * matrix, int size, double *featureVector, double *eigenValue, double dbEps = 0.01, int nJt = 300);
+//求单个点的法向量
+vector<double> computeNormal_(vector<PointT> points);
+
 //点云法向量
 void PointCloudVision::on_action_cloud_normal_vector_2_triggered()
 {
-	outputInDebug("****");
+	if (m_currentCloud->empty()) {
+
+		ui.textBrowser->append("计算失败，未打开点云");
+		return;
+	}
+	ui.textBrowser->append("开始计算法向量");
+
+	PointT start;//法向量起始点
+	PointT *end = new PointT();//法向量终点
+	vector<PointT> proximityPoints;//临近点集合
+	vector<PointT> proximityPointIndex;//临近点下标集合
+	vector<float> pointSquaredDistance;
+	vector<double> vectorP;//法向量坐标
+	float size;//法向量长度
+
+
+
+	for (int i = 0; i < m_currentCloud->points.size(); i++) {
+
+		ui.textBrowser->append("开始寻找点" + i);
+		start = m_currentCloud->points[i];
+		
+		//临近点搜索
+		//创建八叉树
+		octree_my::octree tree = createMyOctreeByDepth(m_currentCloud, 4);
+		//搜索邻近点
+		visualization(viewer, tree, start, pointIndex, pointSquaredDistance, m_currentCloud);
+		cout << "临近点数量为：" << pointIndex.size() << endl;
+		cout << "pointSquaredDistance 尺寸为" << pointSquaredDistance.size();
+
+		proximityPoints.push_back(start);
+		for (int i = 0; i < pointIndex.size(); i++) {
+
+			proximityPoints.push_back(m_currentCloud->points[pointIndex[i]]);
+		}
+
+		//计算法向量
+		vectorP = computeNormal_(proximityPoints);
+
+		//法向量单位化
+		int sum = vectorP[0] + vectorP[1] + vectorP[2];
+		vectorP[0] = vectorP[0] / sum;
+		vectorP[1] = vectorP[1] / sum;
+		vectorP[2] = vectorP[2] / sum;
+		delete &sum;
+
+		//计算点云尺寸并确定向量长度
+		PointT max, min;
+		pcl::getMinMax3D(*m_currentCloud, min, max);
+		size = sqrt(max.x*max.x + max.y*max.y + max.z*max.z) / 5;
+
+		//判断方向并确定法向量终点
+		if ((start.x * (float)vectorP[0] + start.y * (float)vectorP[1] + start.z * (float)vectorP[2] < 0))
+		{
+			end->x = start.x - (float)vectorP[0] * size;
+			end->y = start.y - (float)vectorP[1] * size;
+			end->z = start.z - (float)vectorP[2] * size;
+		}
+		else
+		{
+			end->x = start.x + vectorP[0];
+			end->y = start.y + vectorP[1];
+			end->z = start.z + vectorP[2];
+		}
+
+		//可视化
+		string s = "arrow" + i;
+		drawArrow(start, *end, s);
+	}
 	return;
 }
-
 //重设视角
 void PointCloudVision::on_action_reset_triggered()
 {
@@ -400,7 +475,12 @@ void PointCloudVision::on_action_reset_triggered()
 
 	if (!m_currentCloud->empty())
 	{
+		viewer->removeAllShapes();
+		pcl::visualization::PointCloudColorHandlerCustom<PointT> singelColor(m_currentCloud, 255, 255, 255);
+		viewer->removeAllPointClouds();
+		viewer->addPointCloud(m_currentCloud, singelColor, "myCloud", 0);
 		viewer->resetCamera();
+		setCoordinate(viewer, m_currentCloud);
 		ui.qvtkWidget->update();
 		ui.textBrowser->append("重设成功");
 		ui.textBrowser->update();QApplication::processEvents();
@@ -677,7 +757,7 @@ void changeViewOfObject(int index,boost::shared_ptr<pcl::visualization::PCLVisua
 	viewer->removeAllCoordinateSystems();
 	if (index == 0)
 	{
-		viewer->setCameraPosition(cloudCentroid[0], cloudCentroid[1] + scale * 5, cloudCentroid[2], 0, -0.5, 0, 0, 1, 0);
+		viewer->setCameraPosition(cloudCentroid[0], cloudCentroid[1] + scale * 5, cloudCentroid[2], 0, -0.5, 0, 0, 0, 0);
 		ui.textBrowser->append("俯视图");
 	}
 	else if (index == 1)
@@ -946,6 +1026,93 @@ void PointCloudVision::on_action_octree_triggered()
 	}
 }
 
+void PointCloudVision::on_action_myoctree1_triggered()
+{
+	if (!m_currentCloud->empty()) {
+		myOctreeDialog1.show();
+		//构建八叉树;
+
+	}
+	else {
+		ui.textBrowser->append("八叉树搜索：未加载点云");
+		ui.textBrowser->update();
+		QApplication::processEvents();
+	}
+}
+//按层数构建八叉树
+//八叉树搜索自创版
+void PointCloudVision::searchPointByOctreeCreatedByDepth(int depth, int pointNum, double radius, int flag, double x, double y, double z)
+{
+	ui.textBrowser->append("开始搜索\n");
+	ui.textBrowser->update();
+	QApplication::processEvents();
+	viewer->removeAllPointClouds();
+	viewer->removeAllShapes();
+	octree_my::octree tree = createMyOctreeByDepth(m_currentCloud, depth);
+	Eigen::Vector4f cloudCentroid;
+	pcl::compute3DCentroid(*m_currentCloud, cloudCentroid);//计算点云质心
+	pcl::PointXYZ searchPoint;
+	searchPoint.x = x;
+	searchPoint.y = y;
+	searchPoint.z = z;
+	outputInDebug(to_string(cloudCentroid[0]));
+	outputInDebug(to_string(cloudCentroid[1]));
+	outputInDebug(to_string(cloudCentroid[2]));
+	int count = pointNum;
+	double radius_my = radius;
+
+	vector<int> pointIndex;
+	vector<float>pointSquaredDistance;
+	visualization(viewer, tree, searchPoint, pointIndex, pointSquaredDistance, m_currentCloud);
+	if (flag == 0)
+	{
+		vsearch(viewer, ui, tree, searchPoint, pointIndex, pointSquaredDistance, m_currentCloud);
+	}
+	else if (flag == 1)
+	{
+		 ksearch(ui,viewer, tree, searchPoint, count, pointIndex, pointSquaredDistance, m_currentCloud);
+	}
+	else
+	{
+		rsearch(ui,viewer,tree, searchPoint, radius_my, count, pointIndex, pointSquaredDistance, m_currentCloud);//半径近邻搜索
+	}
+}
+
+//半径八叉树搜索_自创版
+void rsearch(Ui::PointCloudVisionClass ui, pcl::visualization::PCLVisualizer::Ptr viewer, octree_my::octree tree, pcl::PointXYZ searchPoint, float radius, int count, vector<int>pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+{
+	cout << "半径近邻搜索\n";
+	if (tree.radiusSearch(searchPoint, radius, pointIndex, pointSquaredDistance))
+	{
+		for (int i = 0; i < pointIndex.size(); i++)
+		{
+			/*cout << "第" << i + 1 << "个临近点：\n"
+			<< "x=" << tree.getInputCloud()->points[pointIndex[i]].x << "\n"
+			<< "y=" << tree.getInputCloud()->points[pointIndex[i]].y << "\n"
+			<< "z=" << tree.getInputCloud()->points[pointIndex[i]].z << "\n"
+			<< "squared distance=" << pointSquaredDistance[i] << "\n";*/
+			string s = "第" + to_string(i + 1) + "个临近点:\n" + "x=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].x) + "\n" + "y=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].y) + "\n" + "z=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].z) + "\n";
+			ui.textBrowser->append(QString::fromStdString(s));
+			ui.textBrowser->update();
+			QApplication::processEvents();
+		}
+		/*-------------------------可视化-------------------------------------------*/
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> set_color(cloud, 0, 255, 0);
+		viewer->addPointCloud<pcl::PointXYZ>(cloud, set_color, "Points");
+		viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Points");	//设置点的大小
+		tree.visualize(viewer, tree.getRoot(), cloud);
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr searchCloud = creatSearchCloud(cloud, pointIndex);
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> set_searchColor(searchCloud, 255, 0, 0);
+		viewer->addPointCloud<pcl::PointXYZ>(searchCloud, set_searchColor, "searchPoints");
+	}
+	else
+	{
+		ui.textBrowser->append("未搜索到点");
+		ui.textBrowser->update();
+		QApplication::processEvents();
+	}
+}
 
 
 //构建八叉树；
@@ -960,7 +1127,163 @@ pcl::octree::OctreePointCloudSearch<PointT> createOctree(pcl::PointCloud<PointT>
 	tree.addPointsFromInputCloud();
 	return tree;
 }
+//八叉树体素搜索张喆
+//输入：像素；搜索点坐标;
+void PointCloudVision::octree_vsearch_zz(double resolution, double x, double y, double z, int r, int g, int b,int flag)
+{
+	ui.textBrowser->append("开始搜索\n");
+	ui.textBrowser->update();
+	QApplication::processEvents();
+	viewer->removeAllShapes();
+	int depth = 8;
+	int max_point_size = resolution;
+	viewer->removeAllPointClouds();
 
+	//构建八叉树;
+	octree_my::octree tree = createMyOctree(m_currentCloud, max_point_size);
+	pcl::PointXYZ searchPoint;
+	searchPoint.x = x;
+	searchPoint.y = y;
+	searchPoint.z = z;
+	int count = 100;
+	int radius_my = 0.05;
+	vector<int> pointIndex;
+	vector<float>pointSquaredDistance;
+	visualization(viewer, tree, searchPoint, pointIndex,pointSquaredDistance,m_currentCloud);
+	if (flag == 0)
+	{
+		vsearch(viewer,ui,tree, searchPoint, pointIndex, pointSquaredDistance, m_currentCloud);
+	}
+	else if (flag == 1)
+	{
+		ksearch(ui, viewer, tree, searchPoint, count, pointIndex, pointSquaredDistance, m_currentCloud);
+	}
+	else
+	{
+		rsearch(ui, viewer, tree, searchPoint, radius_my, count, pointIndex, pointSquaredDistance, m_currentCloud);//半径近邻搜索
+	}
+	
+}
+
+void visualization(pcl::visualization::PCLVisualizer::Ptr viewer,octree_my::octree tree, pcl::PointXYZ searchPoint, std::vector<int> pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+{
+	
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> set_color(cloud, 0, 255, 0);
+	viewer->addPointCloud<pcl::PointXYZ>(cloud, set_color, "Points");
+	viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Points");	//设置点的大小
+	tree.visualize(viewer, tree.getRoot(), cloud);
+}
+
+//自创版K临近搜索
+void ksearch(Ui::PointCloudVisionClass ui,pcl::visualization::PCLVisualizer::Ptr viewer, octree_my::octree tree, pcl::PointXYZ searchPoint, int count, vector<int>pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+{
+
+	cout << "k近邻搜索\n";
+	if (tree.KSearch(searchPoint, pointIndex, pointSquaredDistance, count))
+	{
+		for (int i = 0; i < pointIndex.size(); i++)
+		{
+			/*cout << "第" << i + 1 << "个临近点：\n"
+				<< "x=" << tree.getInputCloud()->points[pointIndex[i]].x << "\n"
+				<< "y=" << tree.getInputCloud()->points[pointIndex[i]].y << "\n"
+				<< "z=" << tree.getInputCloud()->points[pointIndex[i]].z << "\n"
+				<< "squared distance=" << pointSquaredDistance[i] << "\n";*/
+			string s = "第" + to_string(i + 1) + "个临近点:\n" + "x=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].x) + "\n" + "y=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].y) + "\n" + "z=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].z) + "\n";
+			ui.textBrowser->append(QString::fromStdString(s));
+			ui.textBrowser->update();
+			QApplication::processEvents();
+		}
+		/*-------------------------可视化-------------------------------------------*/
+		//pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("可视化窗口3"));
+		//viewer->setBackgroundColor(255, 255, 255);
+
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> set_color(cloud, 0, 255, 0);
+		viewer->addPointCloud<pcl::PointXYZ>(cloud, set_color, "Points");
+		viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Points");	//设置点的大小
+		tree.visualize(viewer, tree.getRoot(), cloud);
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr searchCloud = creatSearchCloud(cloud, pointIndex);
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> set_searchColor(searchCloud, 255, 0, 0);
+		viewer->addPointCloud<pcl::PointXYZ>(searchCloud, set_searchColor, "searchPoints");
+	}
+	else
+	{
+		ui.textBrowser->append("未搜索到点");
+		ui.textBrowser->update();
+		QApplication::processEvents();
+	}
+}
+
+//自创版体素搜索具体实现
+void vsearch(pcl::visualization::PCLVisualizer::Ptr viewer,Ui::PointCloudVisionClass ui,octree_my::octree tree, pcl::PointXYZ searchPoint, std::vector<int> pointIndex, vector<float>pointSquaredDistance, pcl::PointCloud<pcl::PointXYZ>::Ptr m_currentCloud)
+{
+	if (tree.voxelSearch(searchPoint, pointIndex, pointSquaredDistance))
+	{
+
+		for (int i = 0; i < pointIndex.size(); i++)
+		{
+
+			string s = "第" + to_string(i + 1) + "个临近点:\n" + "x=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].x) + "\n" + "y=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].y) + "\n" + "z=" + std::to_string(tree.getInputCloud()->points[pointIndex[i]].z) + "\n";
+			/*cout << "第" << i + 1 << "个临近点：\n"
+			<< "x=" << tree.getInputCloud()->points[pointIndex[i]].x << "\n"
+			<< "y=" << tree.getInputCloud()->points[pointIndex[i]].y << "\n"
+			<< "z=" << tree.getInputCloud()->points[pointIndex[i]].z << "\n"
+			<< endl;*/
+			ui.textBrowser->append(QString::fromStdString(s));
+			ui.textBrowser->update();
+			QApplication::processEvents();
+		}
+		/*-------------------------可视化-------------------------------------------*/
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> set_color(m_currentCloud, 0, 255, 0);
+		viewer->addPointCloud<pcl::PointXYZ>(m_currentCloud, set_color);
+		viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Points");	//设置点的大小
+		//添加到窗口
+		pcl::PointCloud<pcl::PointXYZ>::Ptr searchCloud = creatSearchCloud(m_currentCloud, pointIndex);
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> set_searchColor(searchCloud, 255, 0, 0);
+		viewer->addPointCloud<pcl::PointXYZ>(searchCloud, set_searchColor, "searchPoints");
+
+		tree.visualize(viewer, tree.getRoot(), m_currentCloud);
+		ui.qvtkWidget->update();
+	}
+	else
+	{
+		ui.textBrowser->append("未搜索到点");
+		ui.textBrowser->update();
+		QApplication::processEvents();
+	}
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr creatSearchCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector<int>pointIndex)
+{
+	pcl::PointCloud<pcl::PointXYZ>::Ptr searchCloud(new pcl::PointCloud<pcl::PointXYZ>);
+	searchCloud->width = cloud->width;
+	searchCloud->height = cloud->height;
+	searchCloud->points.resize(cloud->points.size());
+	for (int i = 0; i < pointIndex.size(); i++) {
+		searchCloud->points[i].x = cloud->points[pointIndex[i]].x;
+		searchCloud->points[i].y = cloud->points[pointIndex[i]].y;
+		searchCloud->points[i].z = cloud->points[pointIndex[i]].z;
+	}
+	return searchCloud;
+}
+
+octree_my::octree createMyOctreeByDepth(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int depth)
+{
+	octree_my::octree tree = octree_my::octree::octree();
+	tree.CreatTree_depth(cloud, depth);
+	//tree.CreatTree_depth(cloud, depth);
+	//定义边界框
+	return tree;
+}
+
+octree_my::octree createMyOctree(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int max_point_size)
+{
+	octree_my::octree tree = octree_my::octree::octree();
+	tree.CreatTree_max_pointSize(cloud, max_point_size);
+	//tree.CreatTree_depth(cloud, depth);
+	//定义边界框
+	return tree;
+}
 
 //八叉树体素搜索
 //输入：像素；搜索点坐标;
@@ -1010,7 +1333,6 @@ void PointCloudVision::octree_vsearch(double resolution, double x, double y, dou
 			searchCloud->points[i].x = m_currentCloud->points[pointIndex[i]].x;
 			searchCloud->points[i].y = m_currentCloud->points[pointIndex[i]].y;
 			searchCloud->points[i].z = m_currentCloud->points[pointIndex[i]].z;
-
 		}
 
 		//添加到窗口
@@ -1032,6 +1354,7 @@ void PointCloudVision::octree_vsearch(double resolution, double x, double y, dou
 }
 
 //八叉树k近邻搜索
+
 
 //三角网格化;
 void PointCloudVision::on_action_triangle_triggered()
@@ -1198,13 +1521,11 @@ void PointCloudVision::on_action_feature_triggered()
 		viewer->resetCamera();
 		ui.qvtkWidget->update();
 		ui.textBrowser->append("特征点提取成功");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		ui.textBrowser->update();QApplication::processEvents();
 	}
 	else {
 		ui.textBrowser->append("特征点提取失败：未加载点云");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		ui.textBrowser->update();QApplication::processEvents();
 	}
 	
 }
@@ -1303,12 +1624,12 @@ void PointCloudVision::on_action_3_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		ui.textBrowser->append("开始体素滤波");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();
+		QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		viewer->removeAllShapes();
-
 		pcl::VoxelGrid<pcl::PointXYZ> vg;		//创建滤波器对象
 		vg.setInputCloud(m_currentCloud);				//设置待滤波点云
 		vg.setLeafSize(1.15f, 1.15f, 1.15f);	//设置体素大小
@@ -1316,13 +1637,11 @@ void PointCloudVision::on_action_3_triggered()
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
 		ui.textBrowser->append("体素滤波成功");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		ui.textBrowser->update();QApplication::processEvents();
 	}
 	else {
 		ui.textBrowser->append("体素滤波失败：未加载点云");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		ui.textBrowser->update();QApplication::processEvents();
 	}
 }
 
@@ -1331,7 +1650,7 @@ void PointCloudVision::on_action_4_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		ui.textBrowser->append("开始直通滤波");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
@@ -1346,12 +1665,12 @@ void PointCloudVision::on_action_4_triggered()
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
 		ui.textBrowser->append("直通滤波成功");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
 		ui.textBrowser->append("直通滤波失败：未加载点云文件");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
@@ -1361,12 +1680,10 @@ void PointCloudVision::on_action_5_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		ui.textBrowser->append("开始统计滤波");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		ui.textBrowser->update();QApplication::processEvents();
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
 		viewer->removeAllShapes();
-
 		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;   //创建统计滤波器对象 
 		sor.setInputCloud(m_currentCloud);         			         //设置输入的点云
 		sor.setMeanK(50);                 					 //设置KNN的k值
@@ -1375,12 +1692,11 @@ void PointCloudVision::on_action_5_triggered()
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
 		ui.textBrowser->append("统计滤波成功");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		 ui.textBrowser->update();QApplication::processEvents();
 	}
 	else {
 		ui.textBrowser->append("统计滤波失败，未加载点云文件");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
@@ -1390,7 +1706,7 @@ void PointCloudVision::on_action_6_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		ui.textBrowser->append("开始均匀采样滤波");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
@@ -1404,13 +1720,12 @@ void PointCloudVision::on_action_6_triggered()
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
 		ui.textBrowser->append("均匀采样滤波成功");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 	else {
 		ui.textBrowser->append("均匀采样滤波失败，未加载点云文件");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		ui.textBrowser->update();QApplication::processEvents();
 	}
 }
 
@@ -1419,7 +1734,7 @@ void PointCloudVision::on_action_7_triggered()
 {
 	if (!m_currentCloud->empty()) {
 		ui.textBrowser->append("开始半径滤波");
-  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 		viewer->removeAllPointClouds();
 		viewer->removeAllCoordinateSystems();
@@ -1433,12 +1748,11 @@ void PointCloudVision::on_action_7_triggered()
 		viewer->addPointCloud(m_currentCloud);
 		ui.qvtkWidget->update();
 		ui.textBrowser->append("半径滤波成功");
-  ui.textBrowser->update();QApplication::processEvents();
-
+		ui.textBrowser->update();QApplication::processEvents();
 	}
 	else {
 		ui.textBrowser->append("均匀采样滤波失败，未加载点云文件");
-		  ui.textBrowser->update();QApplication::processEvents();
+		ui.textBrowser->update();QApplication::processEvents();
 
 	}
 }
@@ -1569,17 +1883,23 @@ void exercise()
 }
 
 //求单个点的法向量
-Eigen::MatrixXd computeNormal_(vector<PointT> points) {
+vector<double> computeNormal_(vector<PointT> points) {
 
 	const int num = points.size();//临近点的数量
-
+	Eigen::MatrixXd errorMatrix(3, 3);
+	Eigen::EigenSolver<Eigen::MatrixXd> es(errorMatrix);
+	Eigen::MatrixXcd evalsReal;//记录下特征值的实数部分
+	Eigen::MatrixXd eigenVector;//记录下特征向量
+	int valueMin;//记录下最小特征值的索引
+	Eigen::Vector3d normal = {0,0,0};
 	//质心点坐标
-	int x_ = 0;
-	int y_ = 0;
-	int z_ = 0;
+	float x_ = 0;
+	float y_ = 0;
+	float z_ = 0;
+
 
 	//计算质心点坐标
-	int temp = 0;
+	float temp = 0;
 
 	for (int i = 0; i < num; i++) {
 
@@ -1603,73 +1923,67 @@ Eigen::MatrixXd computeNormal_(vector<PointT> points) {
 	}
 	z_ = temp / num;
 
-	Eigen::MatrixXd errorMatrix(3, num);//坐标误差矩阵
-	Eigen::MatrixXd errorMatrix_trans(3, num);//坐标误差矩阵的转置
-	Eigen::EigenSolver<Eigen::MatrixXd> *covarianceMatrix;//协方差矩阵
-	Eigen::MatrixXd featureVectros;//特征向量
+
+	errorMatrix(0, 0) = 0;
+	errorMatrix(0, 1) = 0;
+	errorMatrix(0, 2) = 0;
+	errorMatrix(1, 0) = 0;
+	errorMatrix(1, 1) = 0;
+	errorMatrix(1, 2) = 0;
+	errorMatrix(2, 0) = 0;
+	errorMatrix(2, 1) = 0;
+	errorMatrix(2, 2) = 0;
 
 	//生成坐标误差矩阵
+	for (int j = 0; j < num; j++) {
+
+		errorMatrix(0, 0) += (points[j].x - x_) * (points[j].x - x_);
+		errorMatrix(0, 1) += (points[j].x - x_) * (points[j].y - y_);
+		errorMatrix(0, 2) += (points[j].x - x_) * (points[j].z - z_);
+		errorMatrix(1, 0) += (points[j].x - x_) * (points[j].y - y_);
+		errorMatrix(1, 1) += (points[j].y - y_) * (points[j].y - y_);
+		errorMatrix(1, 2) += (points[j].z - z_) * (points[j].y - y_);
+		errorMatrix(2, 0) += (points[j].x - x_) * (points[j].z - z_);
+		errorMatrix(2, 1) += (points[j].y - y_) * (points[j].z - z_);
+		errorMatrix(2, 2) += (points[j].z - z_) * (points[j].z - x_);
+	}
+
+	int max = INT_MAX;//记录下最小特征值对应的索引值
+	evalsReal = es.eigenvalues().real();
+
+	eigenVector = es.eigenvectors().real();
+	
 	for (int i = 0; i < 3; i++) {
 
-		for (int j = 0; j < num; j++) {
+		if (evalsReal(i, 0).real() < max) {
 
-			switch (i) {
-
-			case 0:
-
-				errorMatrix(i,j) = points[j].x;
-				break;
-
-			case 1:
-
-				errorMatrix(i, j) = points[j].y;
-				break;
-
-			case 2:
-
-				errorMatrix(i, j) = points[j].z;
-				break;
-
-			default:
-				break;
-			}
+			valueMin = i;
+			max = evalsReal(i, 0).real();
 		}
 	}
-
-	//矩阵转置
-	errorMatrix_trans = errorMatrix.transpose();
-
-	//生成协方差矩阵
-	covarianceMatrix = new  Eigen::EigenSolver<Eigen::MatrixXd>(errorMatrix * errorMatrix_trans);
-
-	//求出法向量
-	featureVectros = covarianceMatrix->eigenvectors().real();
-
-	return featureVectros;
+	normal << eigenVector(0, valueMin), eigenVector(1, valueMin), eigenVector(2, valueMin);
+	
+	vector<double> res(&normal[0], normal.data() + normal.cols()*normal.rows());
+	return  res;
 }
 
-void PointCloudVision::computeNormals() {
+void PointCloudVision::drawArrow(PointT start, PointT end, string id, vector<int> RGB) {
 
-	//------------------计算法线----------------------
-	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> n;//OMP加速
-	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-	//建立kdtree来进行近邻点集搜索
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
-	n.setNumberOfThreads(10);//设置openMP的线程数
-							 //n.setViewPoint(0,0,0);//设置视点，默认为（0，0，0）
-	n.setInputCloud(m_currentCloud);
-	n.setSearchMethod(tree);
-	n.setKSearch(10);//点云法向计算时，需要所搜的近邻点大小
-					 //n.setRadiusSearch(0.03);//半径搜素
-	n.compute(*normals);//开始进行法向计
+	vector<float> vec = { end.x - start.x, end.y - start.y, end.z - start.z };
+	PointT *l = new PointT();
+	PointT *r = new PointT();
 
-						//----------------可视化--------------
-						//添加需要显示的点云法向。cloud为原始点云模型，normal为法向信息，20表示需要显示法向的点云间隔，即每20个点显示一次法向，0.02表示法向长度。
-	viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal>(m_currentCloud, normals, 20, 1, "normals");
-	//设置点云大小
-	viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "sample cloud");
-	while (!viewer->wasStopped())
-	{
-		viewer->spinOnce(100);
-	}
+	l->x = start.x + vec[0] * 4 / 3;
+	l->y = start.y + vec[0] * 2 / 3;
+	l->z = start.z + vec[0] * 2 / 3;
+
+	r->x = start.x;
+	r->y = start.y + vec[0] * 2 / 3;
+	r->z = start.z + vec[0] * 2 / 3;
+
+
+	viewer->addLine<PointT>(start, end);
+	viewer->addLine<PointT>(end, *l);
+	viewer->addLine<PointT>(end, *r);
+	return;
 }

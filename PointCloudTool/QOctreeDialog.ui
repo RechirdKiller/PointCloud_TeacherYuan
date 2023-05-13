@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>750</width>
+    <width>794</width>
     <height>394</height>
    </rect>
   </property>
@@ -29,7 +29,7 @@
         <double>99999.990000000005239</double>
        </property>
        <property name="value">
-        <double>2.000000000000000</double>
+        <double>100.000000000000000</double>
        </property>
       </widget>
      </item>
@@ -95,6 +95,20 @@
      <property name="rightMargin">
       <number>0</number>
      </property>
+     <item>
+      <widget class="QPushButton" name="btn_cSearch">
+       <property name="text">
+        <string>半径邻域搜索1</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_mSearch">
+       <property name="text">
+        <string>k邻域搜索1</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QPushButton" name="btn_sSearch">
        <property name="text">

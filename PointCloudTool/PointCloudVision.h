@@ -9,7 +9,8 @@
 #include <vtkRenderWindow.h>					//vtk可视化窗口
 #include <pcl/common/common.h>					//点云极值
 #include "QHeightRampDlg.h"						//高度渲染
-#include "QOctreeDialog.h"						//八叉树
+#include "QOctreeDialog.h"
+#include "QOctrTree_my.h"
 												//kd-tree
 #include <pcl/filters/passthrough.h>			//直通滤波
 #include <pcl/io/pcd_io.h>						//PCL的PCD格式文件的输入输出头文件
@@ -29,8 +30,8 @@
 #include <pcl/console/parse.h>
 
 #include <string>
-
-
+#include <vector>
+using namespace std;
 //设置中文编码
 #pragma execution_character_set("utf-8")
 
@@ -70,9 +71,10 @@ private:
 
 	//八叉树对话框
 	QOctreeDialog octreeDialog;
-
+	//八叉树对话框自创版本
+	//八叉树自创版本
+	QOctrTree_my myOctreeDialog1;
 	//kd树对话框
-
 
 	//滤波工具栏；
 	QToolButton *toolButton;
@@ -189,8 +191,17 @@ public slots:
 	//八叉树;
 	void on_action_octree_triggered();
 
+	//八叉树自创版
+	void on_action_myoctree1_triggered();
+
 	//八叉树体素搜索;
 	void octree_vsearch(double resolution, double x, double y, double z, int r, int g, int b);
+
+	//八叉树体素搜索张喆;
+	void octree_vsearch_zz(double resolution, double x, double y, double z, int r, int g, int b,int flag);
+
+	//八叉树搜索按层数创建搜索
+	void searchPointByOctreeCreatedByDepth(int depth, int pointNum, double radius, int flag, double x, double y, double z);
 
 	//根据index判断上下左右移动
 	void changeLocationOfObject(int index);
@@ -201,9 +212,10 @@ public slots:
 	//八叉树k近邻搜索;
 	//void ksearch(float resolution, double x, double y, double z, int k);
 
-	//计算法向量——PCL
-	void computeNormals();
+	//画箭头
+	void drawArrow(PointT start, PointT end, string id, vector<int> RGB = { 255,0,0 });
 
 private:
 	Ui::PointCloudVisionClass ui;
+	vector<int> pointIndex;//邻近点搜索
 };

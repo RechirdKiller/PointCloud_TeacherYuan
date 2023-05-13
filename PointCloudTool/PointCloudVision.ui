@@ -242,6 +242,7 @@ background-color: rgb(255, 0, 255);</string>
    <addaction name="action_octree"/>
    <addaction name="separator"/>
    <addaction name="action_cloud_normal_vector_2"/>
+   <addaction name="action_myoctree1"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QToolBar" name="toolBar">
@@ -623,6 +624,18 @@ background-color: rgb(255, 0, 255);</string>
    </property>
    <property name="toolTip">
     <string>点云法向量</string>
+   </property>
+  </action>
+  <action name="action_myoctree1">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/treeLike.png</normaloff>:/PointCloudVision/image/treeLike.png</iconset>
+   </property>
+   <property name="text">
+    <string>八叉树1.0</string>
    </property>
   </action>
  </widget>
