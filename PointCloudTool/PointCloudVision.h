@@ -2,7 +2,7 @@
 #include <QtWidgets/QMainWindow>
 
 #include "ui_PointCloudVision.h"
-
+#include "QtWidgetsClass.h"
 #include <pcl/point_types.h>					//点云数据类型
 #include <pcl/point_cloud.h>					//点云类
 #include <pcl/visualization/pcl_visualizer.h>	//点云可视化类
@@ -11,6 +11,7 @@
 #include "QHeightRampDlg.h"						//高度渲染
 #include "QOctreeDialog.h"
 #include "QOctrTree_my.h"
+#include "segmentation_dragon.h"
 												//kd-tree
 #include <pcl/filters/passthrough.h>			//直通滤波
 #include <pcl/io/pcd_io.h>						//PCL的PCD格式文件的输入输出头文件
@@ -28,7 +29,8 @@
 #include <pcl/keypoints/narf_keypoint.h>
 #include <pcl/features/narf_descriptor.h>
 #include <pcl/console/parse.h>
-
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/filters/extract_indices.h>
 #include <string>
 #include <vector>
 using namespace std;
@@ -56,6 +58,8 @@ private:
 
 	//当前的点云
 	PointCloudT::Ptr m_currentCloud;
+	//备份点云
+	PointCloudT::Ptr another_currentCloud;
 
 	//高度渲染的点云列
 	QList<PointCloudT::Ptr> m_heightCloudList;
@@ -76,6 +80,12 @@ private:
 	QOctrTree_my myOctreeDialog1;
 	//kd树对话框
 
+	//区域分割对话框
+	segmentation_dragon son_dragon;
+
+	//过滤窗口
+	QtWidgetsClass filter_dialog;
+
 	//滤波工具栏；
 	QToolButton *toolButton;
 	//配准工具栏;
@@ -86,8 +96,7 @@ private:
 	//放大次数
 	double maxLen;
 
-	//鼠标选点回调函数
-	void pp_callback(const pcl::visualization::PointPickingEvent& event, void* args);
+	
 
 public slots:
 	//打开点云
@@ -158,7 +167,9 @@ public slots:
 	
 	//区域增长分割算法
 	void on_action_grow_triggered();
-
+	//区域增长分割（识别）算法
+	void on_action_segmentation_triggered();
+	void segmentation_calculate_by_choice(int k_choice, double DisThre, int minSize, double normalWeight, int maxite , int maxError);
 	//PCA-ICP
 	void on_action_icp_triggered();
 
@@ -166,6 +177,8 @@ public slots:
 	void on_action_action_scale_icp_triggered();
 
 	//滤波
+	void on_action_filter_triggered();
+	void filter_dialog_function(int times);
 
 	//体素滤波
 	void on_action_3_triggered();
@@ -182,7 +195,7 @@ public slots:
 	//半径滤波
 	void on_action_7_triggered();
 
-	//点云法向量
+	//点云法向量-周子龙版
 	void on_action_cloud_normal_vector_2_triggered();
 	
 	//进行高度渲染
@@ -191,17 +204,26 @@ public slots:
 	//八叉树;
 	void on_action_octree_triggered();
 
-	//八叉树自创版
+	//八叉树自创版-张喆
 	void on_action_myoctree1_triggered();
 
-	//八叉树体素搜索;
-	void octree_vsearch(double resolution, double x, double y, double z, int r, int g, int b);
+	//八叉树体素搜索-调库;
+	void octree_vsearch(double resolution, double x, double y, double z, int r, int g, int b,int orderNum);
+
+	//八叉树k邻近搜索-调库;
+	void octree_kdtSearch(double resolution, double x, double y, double z, int r, int g, int b, int pointNum,int orderNum);
+
+	//八叉树半径邻搜索-调库
+	void octree_radiusTreeSearsch(double resolution, double x, double y, double z, int r, int g, int b,int radiusAccount,int orderNum);
 
 	//八叉树体素搜索张喆;
 	void octree_vsearch_zz(double resolution, double x, double y, double z, int r, int g, int b,int flag);
 
-	//八叉树搜索按层数创建搜索
+	//八叉树搜索按层数创建搜索张喆
 	void searchPointByOctreeCreatedByDepth(int depth, int pointNum, double radius, int flag, double x, double y, double z);
+
+	//点云法向量-调库版本
+	void on_action_normal_vector_library_version_triggered();
 
 	//根据index判断上下左右移动
 	void changeLocationOfObject(int index);
@@ -219,3 +241,6 @@ private:
 	Ui::PointCloudVisionClass ui;
 	vector<int> pointIndex;//邻近点搜索
 };
+
+//鼠标回调函数
+void pp_callback(const pcl::visualization::PointPickingEvent& event, void* args);

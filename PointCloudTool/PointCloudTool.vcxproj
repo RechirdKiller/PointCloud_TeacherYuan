@@ -62,7 +62,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\Eigen\eigen-3.3.9;.\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
@@ -93,17 +93,21 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="PCA_ICP.cpp" />
-    <ClCompile Include="PointCloudVision.cpp" />
+    <ClCompile Include="PointCloudTool.cpp" />
     <ClCompile Include="QHeightRampDlg.cpp" />
     <ClCompile Include="QOctreeDialog.cpp" />
     <ClCompile Include="QOctrTree_my.cpp" />
+    <ClCompile Include="QtWidgetsClass.cpp" />
     <ClCompile Include="scale_ICP_v2.cpp" />
+    <ClCompile Include="segmentation_dragon.cpp" />
     <QtRcc Include="PointCloudVision.qrc" />
     <ClCompile Include="main.cpp" />
     <QtUic Include="PointCloudVision.ui" />
     <QtUic Include="QHeightRampDlg.ui" />
     <QtUic Include="QOctreeDialog.ui" />
     <QtUic Include="QOctrTree_my.ui" />
+    <QtUic Include="QtWidgetsClass.ui" />
+    <QtUic Include="segmentation_dragon.ui" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="PointCloudVision.h" />
@@ -116,8 +120,10 @@
       <DeploymentContent>true</DeploymentContent>
     </ClInclude>
     <ClInclude Include="PCA_ICP.h" />
+    <QtMoc Include="segmentation_dragon.h" />
     <QtMoc Include="QOctreeDialog.h" />
     <QtMoc Include="QOctrTree_my.h" />
+    <QtMoc Include="QtWidgetsClass.h" />
     <ClInclude Include="scale_ICP_v2.h" />
   </ItemGroup>
   <ItemGroup>

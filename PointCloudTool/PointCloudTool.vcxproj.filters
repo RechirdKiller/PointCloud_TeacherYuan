@@ -31,9 +31,6 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PointCloudVision.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="QHeightRampDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -47,6 +44,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="QOctrTree_my.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PointCloudTool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="segmentation_dragon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="QtWidgetsClass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -63,6 +69,12 @@
     <QtMoc Include="QOctrTree_my.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="segmentation_dragon.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="QtWidgetsClass.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="PointCloudVision.ui">
@@ -75,6 +87,12 @@
       <Filter>Form Files</Filter>
     </QtUic>
     <QtUic Include="QOctrTree_my.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="segmentation_dragon.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="QtWidgetsClass.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

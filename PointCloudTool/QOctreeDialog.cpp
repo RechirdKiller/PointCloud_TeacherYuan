@@ -25,42 +25,15 @@ QOctreeDialog::QOctreeDialog(QWidget *parent)
 {
 	ui.setupUi(this);
 	setWindowModality(Qt::ApplicationModal);
+	connect(ui.horizontalSlider, SIGNAL(valueChanged(int)), ui.spinBox, SLOT(setValue(int)));
+	connect(ui.spinBox, SIGNAL(valueChanged(int)), ui.horizontalSlider, SLOT(setValue(int)));
+
+	connect(ui.horizontalSlider_2, SIGNAL(valueChanged(int)), ui.spinBox_2, SLOT(setValue(int)));
+	connect(ui.spinBox_2, SIGNAL(valueChanged(int)), ui.horizontalSlider_2, SLOT(setValue(int)));
 }
 
 QOctreeDialog::~QOctreeDialog()
 {
-}
-
-//ÌåËØËÑË÷1
-void QOctreeDialog::on_btn_sSearch_clicked()
-{
-	double resolution = ui.input_resolution->value();
-	double x = ui.input_X->value();
-	double y = ui.input_Y->value();
-	double z = ui.input_Z->value();
-	emit octree_vsearch_zz(resolution, x, y, z, r, g, b,0);
-	close();
-}
-
-////kÁÚÓòËÑË÷1
-void QOctreeDialog::on_btn_mSearch_clicked()
-{
-	double resolution = ui.input_resolution->value();
-	double x = ui.input_X->value();
-	double y = ui.input_Y->value();
-	double z = ui.input_Z->value();
-	emit octree_vsearch_zz(resolution, x, y, z, r, g, b,1);
-	close();
-}
-
-void QOctreeDialog::on_btn_cSearch_clicked()
-{
-	double resolution = ui.input_resolution->value();
-	double x = ui.input_X->value();
-	double y = ui.input_Y->value();
-	double z = ui.input_Z->value();
-	emit octree_vsearch_zz(resolution, x, y, z, r, g, b,2);
-	close();
 }
 
 //ÌåËØ½üÁÚËÑË÷
@@ -70,7 +43,8 @@ void QOctreeDialog::on_btn_vSearch_clicked()
 	double x = ui.input_X->value();
 	double y = ui.input_Y->value();
 	double z = ui.input_Z->value();
-	emit octree_vsearch(resolution, x, y, z, r, g, b);
+	int orderNum = ui.spinBox_3->value();
+	emit octree_vsearch(resolution, x, y, z, r, g, b, orderNum);
 	close();
 }
 
@@ -79,11 +53,28 @@ void QOctreeDialog::on_btn_vSearch_clicked()
 //kÁÚÓòËÑË÷
 void QOctreeDialog::on_btn_kSearch_clicked()
 {
+	double resolution = ui.input_resolution->value();
+	double x = ui.input_X->value();
+	double y = ui.input_Y->value();
+	double z = ui.input_Z->value();
+	int pointNum = ui.horizontalSlider->value();
+	//int radiusAccount = ui.horizontalSlider_2->value();
+	int orderNum = ui.spinBox_3->value();
+	emit octree_kdtSearch(resolution, x, y, z, r, g, b, pointNum, orderNum);
+	close();
 }
 
 //°ë¾¶ÁÚÓòËÑË÷
 void QOctreeDialog::on_btn_rSearch_clicked()
 {
+	double resolution = ui.input_resolution->value();
+	double x = ui.input_X->value();
+	double y = ui.input_Y->value();
+	int radiusAccount = ui.horizontalSlider_2->value();
+	double z = ui.input_Z->value();
+	int orderNum = ui.spinBox_3->value();
+	emit octree_radiusTreeSearsch(resolution, x, y, z, r, g, b,radiusAccount, orderNum);
+	close();
 }
 
 //ÉèÖÃÑÕÉ«

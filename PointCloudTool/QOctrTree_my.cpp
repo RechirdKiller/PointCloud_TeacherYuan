@@ -4,6 +4,7 @@ QOctrTree_my::QOctrTree_my(QWidget *parent)
 	: QDialog(parent)
 {
 	ui.setupUi(this);
+	
 	connect(ui.slider, SIGNAL(valueChanged(int)), ui.spinBox_2, SLOT(setValue(int)));
 	connect(ui.spinBox_2, SIGNAL(valueChanged(int)), ui.slider, SLOT(setValue(int)));
 }
@@ -20,6 +21,7 @@ void QOctrTree_my::on_btn_SearchFirst_clicked()
 	x = ui.doubleSpinBox->value();
 	y = ui.doubleSpinBox_2->value();
 	z = ui.doubleSpinBox_3->value();
+	
 	emit searchPointByOctreeCreatedByDepth(depth,pointNum,radius,0,x,y,z);
 	close();
 }

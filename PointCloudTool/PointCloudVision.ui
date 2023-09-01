@@ -49,7 +49,7 @@
        <enum>QLayout::SetFixedSize</enum>
       </property>
       <item>
-       <widget class="QVTKWidget" name="qvtkWidget">
+       <widget class="QVTKWidget" name="qvtkWidget" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -243,6 +243,9 @@ background-color: rgb(255, 0, 255);</string>
    <addaction name="separator"/>
    <addaction name="action_cloud_normal_vector_2"/>
    <addaction name="action_myoctree1"/>
+   <addaction name="action_normal_vector_library_version"/>
+   <addaction name="action_segmentation"/>
+   <addaction name="action_filter"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QToolBar" name="toolBar">
@@ -636,6 +639,42 @@ background-color: rgb(255, 0, 255);</string>
    </property>
    <property name="text">
     <string>八叉树1.0</string>
+   </property>
+  </action>
+  <action name="action_normal_vector_library_version">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/normalvector.png</normaloff>:/PointCloudVision/image/normalvector.png</iconset>
+   </property>
+   <property name="text">
+    <string>normal vector library version</string>
+   </property>
+  </action>
+  <action name="action_segmentation">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/segmentation.png</normaloff>:/PointCloudVision/image/segmentation.png</iconset>
+   </property>
+   <property name="text">
+    <string>segmentation</string>
+   </property>
+  </action>
+  <action name="action_filter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="PointCloudVision.qrc">
+     <normaloff>:/PointCloudVision/image/Voxel.png</normaloff>:/PointCloudVision/image/Voxel.png</iconset>
+   </property>
+   <property name="text">
+    <string>filter</string>
    </property>
   </action>
  </widget>

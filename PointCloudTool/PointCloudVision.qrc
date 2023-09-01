@@ -1,5 +1,8 @@
 <RCC>
   <qresource prefix="/PointCloudVision">
+    <file>image/Voxel.png</file>
+    <file>image/segmentation.png</file>
+    <file>image/normalvector.png</file>
     <file>image/treeLike.png</file>
     <file>image/xiangliang.png</file>
     <file>image/add (2).png</file>
